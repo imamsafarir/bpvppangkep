@@ -1,8 +1,6 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', $berita->judul_berita . ' - ' . ($settings?->website_name ?? 'BPVP Pangkep')); ?>
 
-@section('title', $berita->judul_berita . ' - ' . ($settings?->website_name ?? 'BPVP Pangkep'))
-
-@push('styles')
+<?php $__env->startPush('styles'); ?>
     <style>
         /* === PROTEKSI LAYOUT KONTEN BERITA === */
         .prose {
@@ -62,63 +60,63 @@
             overflow-x: auto;
         }
     </style>
-@endpush
+<?php $__env->stopPush(); ?>
 
-@section('content')
+<?php $__env->startSection('content'); ?>
     <main class="pt-32 pb-16 min-h-screen bg-slate-50/50">
-        {{-- 💡 Lebar dinaikkan ke max-w-7xl agar muat 2 kolom berdampingan --}}
+        
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-            {{-- Breadcrumb Navigation --}}
+            
             <nav class="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider select-none">
                 <a href="/" class="hover:text-blue-600 transition-colors">Home</a>
                 <i class="fas fa-chevron-right text-[9px]"></i>
-                <a href="{{ route('berita.index') }}" class="hover:text-blue-600 transition-colors">Berita</a>
+                <a href="<?php echo e(route('berita.index')); ?>" class="hover:text-blue-600 transition-colors">Berita</a>
                 <i class="fas fa-chevron-right text-[9px]"></i>
-                <span class="text-blue-600 truncate max-w-[200px] sm:max-w-xs">{{ $berita->judul_berita }}</span>
+                <span class="text-blue-600 truncate max-w-[200px] sm:max-w-xs"><?php echo e($berita->judul_berita); ?></span>
             </nav>
 
-            {{-- 🟢 GRID SYSTEM: Mengatur susunan kiri dan kanan berdampingan di desktop --}}
-            {{-- Properti 'items-start' hukumnya WAJIB agar fungsi sticky berjalan --}}
+            
+            
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-                {{-- =========================================================
-                     COLUMN KIRI: ARTIKEL UTAMA & NAVIGASI (Lebar: 8 Kolom)
-                     ========================================================= --}}
+                
                 <div class="lg:col-span-8 space-y-6">
                     <article class="bg-white rounded-3xl border border-slate-200/60 shadow-xs overflow-hidden">
 
-                        {{-- Image Banner Manager --}}
-                        @if ($berita->file_foto)
-                            @php
+                        
+                        <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($berita->file_foto): ?>
+                            <?php
                                 $foto = $berita->file_foto;
                                 if (is_string($foto)) {
                                     $foto = json_decode($foto, true) ?? [$foto];
                                 }
                                 $gambarUtama = is_array($foto) ? $foto[0] ?? null : $foto;
-                            @endphp
+                            ?>
 
-                            @if ($gambarUtama)
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($gambarUtama): ?>
                                 <div class="w-full aspect-video bg-slate-100 overflow-hidden">
-                                    <img src="{{ asset('storage/' . $gambarUtama) }}" alt="{{ $berita->judul_berita }}"
+                                    <img src="<?php echo e(asset('storage/' . $gambarUtama)); ?>" alt="<?php echo e($berita->judul_berita); ?>"
                                         class="w-full h-full object-cover">
                                 </div>
-                            @endif
-                        @endif
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
+                        <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
 
                         <div class="p-6 sm:p-10 space-y-6">
-                            {{-- Metadata Berita --}}
+                            
                             <div class="border-b border-slate-100 pb-5 space-y-2">
                                 <span
                                     class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-full uppercase tracking-wider inline-block">
                                     Artikel Berita
                                 </span>
                                 <h1 class="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-tight">
-                                    {{ $berita->judul_berita }}
+                                    <?php echo e($berita->judul_berita); ?>
+
                                 </h1>
                                 <div class="flex items-center gap-2 text-xs text-slate-400 pt-1 font-medium">
                                     <i class="far fa-calendar-alt"></i>
-                                    <span>{{ $berita->created_at?->translatedFormat('d F Y H:i') ?? 'Baru saja' }}
+                                    <span><?php echo e($berita->created_at?->translatedFormat('d F Y H:i') ?? 'Baru saja'); ?>
+
                                         WITA</span>
                                     <span class="text-slate-200">•</span>
                                     <i class="far fa-user"></i>
@@ -126,27 +124,28 @@
                                 </div>
                             </div>
 
-                            {{-- Isi Konten Utama --}}
+                            
                             <div class="text-slate-700 text-sm sm:text-base leading-relaxed max-w-none prose prose-slate">
-                                {!! $berita->konten_berita !!}
+                                <?php echo $berita->konten_berita; ?>
+
                             </div>
 
-                            {{-- MEDIA SHARE BUTTONS --}}
+                            
                             <div class="pt-6 border-t border-slate-100 space-y-3" x-data="{ copied: false }">
                                 <h4 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Bagikan Berita Ini
                                 </h4>
                                 <div class="flex flex-wrap items-center gap-2">
-                                    <a href="https://api.whatsapp.com/send?text={{ rawurlencode($berita->judul_berita . ' - ' . url()->current()) }}"
+                                    <a href="https://api.whatsapp.com/send?text=<?php echo e(rawurlencode($berita->judul_berita . ' - ' . url()->current())); ?>"
                                         target="_blank"
                                         class="inline-flex items-center gap-2 px-3 py-2 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl font-bold text-xs transition duration-300">
                                         <i class="fab fa-whatsapp text-sm"></i> WhatsApp
                                     </a>
-                                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ rawurlencode(url()->current()) }}"
+                                    <a href="https://www.facebook.com/sharer/sharer.php?u=<?php echo e(rawurlencode(url()->current())); ?>"
                                         target="_blank"
                                         class="inline-flex items-center gap-2 px-3 py-2 bg-blue-50 hover:bg-blue-600 text-blue-600 hover:text-white rounded-xl font-bold text-xs transition duration-300">
                                         <i class="fab fa-facebook-f text-sm"></i> Facebook
                                     </a>
-                                    <a href="https://twitter.com/intent/tweet?url={{ rawurlencode(url()->current()) }}&text={{ rawurlencode($berita->judul_berita) }}"
+                                    <a href="https://twitter.com/intent/tweet?url=<?php echo e(rawurlencode(url()->current())); ?>&text=<?php echo e(rawurlencode($berita->judul_berita)); ?>"
                                         target="_blank"
                                         class="inline-flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-900 text-slate-800 hover:text-white rounded-xl font-bold text-xs transition duration-300">
                                         <i class="fab fa-x-twitter text-sm"></i> Twitter
@@ -182,100 +181,103 @@
                         </div>
                     </article>
 
-                    {{-- NAVIGASI SEBELUMNYA & SELANJUTNYA --}}
+                    
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                        {{-- Halaman Sebelumnya --}}
+                        
                         <div>
-                            @if (isset($prevBerita) && $prevBerita)
-                                <a href="{{ route('berita.show', $prevBerita->id) }}"
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($prevBerita) && $prevBerita): ?>
+                                <a href="<?php echo e(route('berita.show', $prevBerita->id)); ?>"
                                     class="group block p-4 bg-white hover:bg-blue-50/50 border border-slate-200/60 rounded-2xl transition duration-300 shadow-2xs">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                                         <i class="fas fa-arrow-left"></i> Berita Sebelumnya
                                     </span>
                                     <span
                                         class="text-xs font-bold text-slate-700 group-hover:text-blue-600 transition-colors line-clamp-1">
-                                        {{ $prevBerita->judul_berita }}
+                                        <?php echo e($prevBerita->judul_berita); ?>
+
                                     </span>
                                 </a>
-                            @endif
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                         </div>
 
-                        {{-- Halaman Selanjutnya --}}
+                        
                         <div class="text-right">
-                            @if (isset($nextBerita) && $nextBerita)
-                                <a href="{{ route('berita.show', $nextBerita->id) }}"
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($nextBerita) && $nextBerita): ?>
+                                <a href="<?php echo e(route('berita.show', $nextBerita->id)); ?>"
                                     class="group block p-4 bg-white hover:bg-blue-50/50 border border-slate-200/60 rounded-2xl transition duration-300 shadow-2xs">
                                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">
                                         Berita Selanjutnya <i class="fas fa-arrow-right"></i>
                                     </span>
                                     <span
                                         class="text-xs font-bold text-slate-700 group-hover:text-blue-600 transition-colors line-clamp-1">
-                                        {{ $nextBerita->judul_berita }}
+                                        <?php echo e($nextBerita->judul_berita); ?>
+
                                     </span>
                                 </a>
-                            @endif
+                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                         </div>
                     </div>
                 </div>
 
-                {{-- =========================================================
-                     🟢 COLUMN KANAN: BACA BERITA LAINNYA (Lebar: 4 Kolom - STICKY)
-                     ========================================================= --}}
-                {{-- 'lg:sticky' & 'lg:top-32' mengunci sidebar agar ikut melayang saat halaman digulir --}}
+                
+                
                 <div class="lg:col-span-4 lg:sticky lg:top-32 space-y-4">
-                    @if (isset($beritaTerkait) && $beritaTerkait->count() > 0)
+                    <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if(isset($beritaTerkait) && $beritaTerkait->count() > 0): ?>
                         <h3 class="text-base font-black text-slate-900 tracking-tight flex items-center gap-2 px-1">
                             <i class="fas fa-newspaper text-blue-600"></i> Baca Berita Lainnya
                         </h3>
 
-                        {{-- Responsive Card Stack: 1 kolom di HP, 2 kolom di Tablet, dan kembali 1 kolom tegak lurus di Sidebar Desktop --}}
+                        
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
-                            @foreach ($beritaTerkait as $terkait)
-                                @php
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::openLoop(); ?><?php endif; ?><?php $__currentLoopData = $beritaTerkait; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $terkait): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::startLoopIteration(); ?><?php endif; ?>
+                                <?php
                                     $subFoto = $terkait->file_foto;
                                     if (is_string($subFoto)) {
                                         $subFoto = json_decode($subFoto, true) ?? [$subFoto];
                                     }
                                     $gambarTerkait = is_array($subFoto) ? $subFoto[0] ?? null : $subFoto;
-                                @endphp
+                                ?>
 
-                                <a href="{{ route('berita.show', $terkait->id) }}"
+                                <a href="<?php echo e(route('berita.show', $terkait->id)); ?>"
                                     class="bg-white rounded-2xl border border-slate-200/60 shadow-2xs overflow-hidden group hover:border-blue-500/30 hover:shadow-md transition duration-300 flex flex-col justify-between">
                                     <div>
                                         <div class="w-full aspect-video bg-slate-100 overflow-hidden relative">
-                                            @if ($gambarTerkait)
-                                                <img src="{{ asset('storage/' . $gambarTerkait) }}"
-                                                    alt="{{ $terkait->judul_berita }}"
+                                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if BLOCK]><![endif]--><?php endif; ?><?php if($gambarTerkait): ?>
+                                                <img src="<?php echo e(asset('storage/' . $gambarTerkait)); ?>"
+                                                    alt="<?php echo e($terkait->judul_berita); ?>"
                                                     class="w-full h-full object-cover group-hover:scale-105 transition duration-500">
-                                            @else
+                                            <?php else: ?>
                                                 <div
                                                     class="w-full h-full flex flex-col items-center justify-center text-slate-300 bg-slate-50 gap-1 text-xs">
                                                     <i class="fas fa-image text-xl"></i>
                                                 </div>
-                                            @endif
+                                            <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                                         </div>
                                         <div class="p-4">
                                             <h4
                                                 class="font-bold text-slate-800 text-xs sm:text-sm line-clamp-2 leading-snug group-hover:text-blue-600 transition-colors">
-                                                {{ $terkait->judul_berita }}
+                                                <?php echo e($terkait->judul_berita); ?>
+
                                             </h4>
                                         </div>
                                     </div>
                                     <div
                                         class="px-4 pb-4 pt-1 flex items-center justify-between text-[10px] font-medium text-slate-400">
-                                        <span>{{ $terkait->created_at?->translatedFormat('d M Y') }}</span>
+                                        <span><?php echo e($terkait->created_at?->translatedFormat('d M Y')); ?></span>
                                         <span
                                             class="text-blue-600 font-bold group-hover:translate-x-0.5 transition-transform">
                                             <i class="fas fa-chevron-right"></i>
                                         </span>
                                     </div>
                                 </a>
-                            @endforeach
+                            <?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::endLoop(); ?><?php endif; ?><?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::closeLoop(); ?><?php endif; ?>
                         </div>
-                    @endif
+                    <?php endif; ?><?php if(\Livewire\Mechanisms\ExtendBlade\ExtendBlade::isRenderingLivewireComponent()): ?><!--[if ENDBLOCK]><![endif]--><?php endif; ?>
                 </div>
 
             </div>
         </div>
     </main>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\Users\HP\Herd\bpvppangkep\resources\views/berita/show.blade.php ENDPATH**/ ?>
