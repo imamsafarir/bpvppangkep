@@ -22,4 +22,4 @@
 <?php $component = $__componentOriginald2aa9f7b74553621bdcc3c69267ff328; ?>
 <?php unset($__componentOriginald2aa9f7b74553621bdcc3c69267ff328); ?>
 <?php endif; ?>
-<?php /**PATH C:\Users\HP\Herd\bpvppangkep\resources\views/filament/pages/manage-pelayanan-publik.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\Users\HP\Herd\bpvppangkep\resources\views/filament/pages/manage-profil.blade.php ENDPATH**/ ?>

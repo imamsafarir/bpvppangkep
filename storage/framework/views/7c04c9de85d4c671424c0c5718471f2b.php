@@ -10,10 +10,7 @@
 <?php $component->withAttributes([]); ?>
 <?php \Livewire\Features\SupportCompiledWireKeys\SupportCompiledWireKeys::processComponentKey($component); ?>
 
-    <div>
-        <?php echo e($this->form); ?>
-
-    </div>
+    <?php echo e($this->form); ?>
 
  <?php echo $__env->renderComponent(); ?>
 <?php endif; ?>
@@ -25,4 +22,4 @@
 <?php $component = $__componentOriginald2aa9f7b74553621bdcc3c69267ff328; ?>
 <?php unset($__componentOriginald2aa9f7b74553621bdcc3c69267ff328); ?>
 <?php endif; ?>
-<?php /**PATH C:\Users\HP\Herd\bpvppangkep\resources\views/filament/pages/manage-informasi-publik.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\Users\HP\Herd\bpvppangkep\resources\views/filament/pages/manage-website-settings.blade.php ENDPATH**/ ?>
