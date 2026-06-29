@@ -57,11 +57,11 @@ Route::prefix('pelayanan-publik')->name('pelayanan.')->group(function () {
 
 Route::prefix('berita-informasi')->name('berita.')->group(function () {
     Route::get('/daftar-berita', [ProfilController::class, 'berita'])->name('index');
-
     // PERBAIKAN: Ubah 'berita.show' menjadi 'show'
     Route::get('/berita/{id}', [ProfilController::class, 'detailBerita'])->name('show');
-
     Route::get('/galeri-kegiatan', [ProfilController::class, 'galeri'])->name('galeri');
 });
+
+Route::get('/galeri/{id}/download', [ProfilController::class, 'download'])->name('galeri.download');
 
 Route::get('/jdih', [ProfilController::class, 'jdih'])->name('jdih.index');

@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Models\Informasi;
 use App\Models\InformasiPublik; // Ambil model Informasi
+use App\Models\BeritaDanGaleri;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use ZipArchive;
 
 class ProfilController extends Controller
 {
@@ -243,5 +247,38 @@ class ProfilController extends Controller
             ->get();
 
         return view('jdih.index', $data);
+    }
+
+    public function download($id)
+    {
+        $galeri = \App\Models\BeritaDanGaleri::findOrFail($id);
+
+        // Ambil data array file_foto dari database
+        $files = is_array($galeri->file_foto)
+            ? $galeri->file_foto
+            : json_decode($galeri->file_foto, true) ?? [];
+
+        if (empty($files)) {
+            return back()->with('error', 'Tidak ada foto dalam galeri ini.');
+        }
+
+        // Tentukan nama file sesuai judul kegiatan
+        $zipFileName = Str::slug($galeri->keterangan_galeri ?? 'galeri-kegiatan') . '.zip';
+        $zipFilePath = storage_path('app/public/' . $zipFileName);
+
+        $zip = new ZipArchive;
+
+        if ($zip->open($zipFilePath, ZipArchive::CREATE | ZipArchive::OVERWRITE) === TRUE) {
+            foreach ($files as $file) {
+                if (Storage::disk('public')->exists($file)) {
+                    $fileData = Storage::disk('public')->path($file);
+                    $zip->addFile($fileData, basename($file));
+                }
+            }
+            $zip->close();
+        }
+
+        // Download file setelah dikompres, lalu hapus zip-nya dari server setelah terkirim
+        return response()->download($zipFilePath)->deleteFileAfterSend(true);
     }
 }

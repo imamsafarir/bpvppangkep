@@ -36,7 +36,7 @@
                         @endphp
 
                         {{-- KOMPONEN ALBUM DENGAN MANAGEMENT CAROUSEL ALPINE.JS --}}
-                        <div x-data="{ isOpen: false, photoIndex: 0, totalPhotos: {{ $jumlahFoto }} }" @keydown.escape.window="isOpen = false"
+                        <div x-data="{ isOpen: {{ request('id') == $galeri->id ? 'true' : 'false' }}, photoIndex: 0, totalPhotos: {{ $jumlahFoto }} }" @keydown.escape.window="isOpen = false"
                             class="relative group select-none">
 
                             {{-- 🗂️ EFEK TUMPUKAN FOTO --}}
@@ -160,15 +160,60 @@
 
                                         {{-- PANEL BAWAH LIGHT MODE: Teks Informatif Terang --}}
                                         <div
-                                            class="bg-slate-50 px-6 py-4 flex justify-between items-center border-t border-slate-200/60 text-slate-800">
-                                            <span
-                                                class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                                Tanggal Agenda: {{ $galeri->created_at?->translatedFormat('d F Y') ?? '' }}
-                                            </span>
-                                            <span
-                                                class="bg-blue-50 border border-blue-100 text-blue-600 px-3 py-1 rounded-md font-mono text-[10px] md:text-xs font-bold tracking-widest"
-                                                x-text="(photoIndex + 1) + ' / ' + totalPhotos">
-                                            </span>
+                                            class="bg-slate-50 px-6 py-4 border-t border-slate-200/60 space-y-4 text-slate-800">
+
+                                            {{-- BARIS ATAS: Tanggal & Counter Foto --}}
+                                            <div class="flex justify-between items-center">
+                                                <span
+                                                    class="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                                    Tanggal Agenda:
+                                                    {{ $galeri->created_at?->translatedFormat('d F Y') ?? '' }}
+                                                </span>
+                                                <span
+                                                    class="bg-blue-50 border border-blue-100 text-blue-600 px-3 py-1 rounded-md font-mono text-[10px] md:text-xs font-bold tracking-widest"
+                                                    x-text="(photoIndex + 1) + ' / ' + totalPhotos">
+                                                </span>
+                                            </div>
+
+                                            {{-- BARIS BAWAH: Tombol Salin Link & Download RAR/ZIP --}}
+                                            {{-- x-data="{ copied: false }" dipasang di sini untuk mengontrol efek klik salin --}}
+                                            <div class="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100"
+                                                x-data="{ copied: false }">
+
+                                                {{-- 🔗 TOMBOL 1: Salin Link Langsung View Galeri (Sudah Diperbaiki) --}}
+                                                <button x-data="{ copied: false }"
+                                                    @click="
+        const directLink = '{{ route('berita.galeri') }}?id={{ $galeri->id }}';
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(directLink);
+        } else {
+            let textArea = document.createElement('textarea');
+            textArea.value = directLink;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+        }
+        copied = true;
+        setTimeout(() => copied = false, 2500);
+    "
+                                                    class="inline-flex items-center gap-2 px-3 py-2 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-xl font-bold text-[11px] md:text-xs transition duration-300 cursor-pointer select-none"
+                                                    :class="copied ? 'bg-green-500 text-white!' : ''">
+                                                    <i class="fas" :class="copied ? 'fa-check' : 'fa-link'"></i>
+                                                    <span
+                                                        x-text="copied ? 'Tautan Tersalin!' : 'Salin Tautan Galeri'"></span>
+                                                </button>
+
+                                                {{-- 📥 TOMBOL 2: Download RAR/ZIP Semua Foto Kegiatan --}}
+                                                <a href="{{ route('galeri.download', $galeri->id) }}"
+                                                    class="inline-flex items-center gap-2 px-3 py-2 bg-red-50 hover:bg-red-600 text-red-600 hover:text-white rounded-xl font-bold text-[11px] md:text-xs transition duration-300 select-none">
+                                                    <i class="fas fa-file-archive text-sm"></i> Unduh Semua Foto (ZIP)
+                                                </a>
+
+                                            </div>
                                         </div>
 
                                     </div>
