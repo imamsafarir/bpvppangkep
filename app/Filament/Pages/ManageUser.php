@@ -237,6 +237,11 @@ class DaftarUserTable extends TableWidget
                                 ->placeholder('Kosongkan jika tidak diubah')
                                 ->password()
                                 ->revealable()
+
+                                // 🟢 KUNCI UTAMA: Paksa inputan jadi kosong saat form edit dimuat
+                                ->afterStateHydrated(fn(\Filament\Forms\Components\TextInput $component) => $component->state(''))
+
+                                // Hanya lakukan hash jika user benar-benar mengetik sesuatu (tidak kosong)
                                 ->dehydrateStateUsing(fn($state) => Hash::make($state))
                                 ->dehydrated(fn($state) => filled($state)),
 
