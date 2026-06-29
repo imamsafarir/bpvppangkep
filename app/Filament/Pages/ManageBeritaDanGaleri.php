@@ -97,32 +97,36 @@ class ManageBeritaDanGaleri extends Page
                         ->required()
                         ->visible(fn(Get $get) => $get('jenis') === 'galeri'),
 
-                    /* ================= FOTO ================= */
+                    /* ================= FOTO UNTUK BERITA (SINGLE) ================= */
                     FileUpload::make('file_foto')
-                        ->label(
-                            fn(Get $get) =>
-                            $get('jenis') === 'berita'
-                                ? 'Foto Sampul Berita'
-                                : 'Foto Kegiatan (Multiple)'
-                        )
+                        ->label('Foto Sampul Berita')
                         ->disk('public')
                         ->visibility('public')
                         ->image()
-                        ->visible(fn(Get $get) => filled($get('jenis')))
-                        ->multiple(fn(Get $get) => $get('jenis') === 'galeri')
-                        ->directory(
-                            fn(Get $get) =>
-                            $get('jenis') === 'berita'
-                                ? 'berita/sampul'
-                                : 'galeri/foto'
-                        )
-                        // GANTI method getUploadedFileNameForStorageUsing di form utama menjadi seperti ini:
+                        // 🟢 Hanya muncul jika jenisnya 'berita'
+                        ->visible(fn(Get $get) => $get('jenis') === 'berita')
+                        ->directory('berita/sampul')
                         ->getUploadedFileNameForStorageUsing(function (Get $get, $file) {
-                            $base = $get('jenis') === 'berita'
-                                ? $get('judul_berita')
-                                : $get('keterangan_galeri');
+                            $base = $get('judul_berita');
+                            return Str::slug($base ?? 'file')
+                                . '-' . time()
+                                . '-' . bin2hex(random_bytes(4))
+                                . '.' . $file->getClientOriginalExtension();
+                        }),
 
-                            // 💡 SOLUSI: Ditambah string acak di belakang time() agar file multiple tidak saling tindih
+                    /* ================= FOTO UNTUK GALERI (MULTIPLE) ================= */
+                    FileUpload::make('file_foto')
+                        ->label('Foto Kegiatan (Multiple)')
+                        ->disk('public')
+                        ->visibility('public')
+                        ->image()
+                        // 🟢 Dikunci selalu MULTIPLE sejak awal
+                        ->multiple()
+                        // 🟢 Hanya muncul jika jenisnya 'galeri'
+                        ->visible(fn(Get $get) => $get('jenis') === 'galeri')
+                        ->directory('galeri/foto')
+                        ->getUploadedFileNameForStorageUsing(function (Get $get, $file) {
+                            $base = $get('keterangan_galeri');
                             return Str::slug($base ?? 'file')
                                 . '-' . time()
                                 . '-' . bin2hex(random_bytes(4))
@@ -279,39 +283,41 @@ class DaftarGaleriTable extends TableWidget
                 TextColumn::make('created_at')->date('d M Y'),
             ])
             ->actions([
-                // 💡 Menggunakan Table EditAction resmi + Pembersih Storage Multiple Galeri
-                // GANTI bagian EditAction milik DaftarBeritaTable menjadi seperti ini:
+                // 🟢 REVISI TOTAL: Form Edit khusus untuk tipe data Galeri
                 EditAction::make()
                     ->color('warning')
                     ->form([
-                        TextInput::make('judul_berita')->label('Judul Berita')->required(),
-                        TagsInput::make('tags')->label('Kategori / Tags'),
-                        RichEditor::make('konten_berita')->label('Isi Berita')->columnSpanFull(),
+                        TextInput::make('keterangan_galeri')
+                            ->label('Keterangan Foto / Kegiatan')
+                            ->required(),
+
                         FileUpload::make('file_foto')
-                            ->label('Foto Sampul Berita')
+                            ->label('Foto Kegiatan (Multiple)')
                             ->disk('public')
+                            ->visibility('public')
                             ->image()
-                            // 💡 PERBAIKAN 1: Wajib di-set multiple karena datanya array, agar tombol browse tidak hilang
-                            ->multiple()
-                            // 💡 PILIHAN: Jika ini sampul berita dan CUMA BOLEH 1 gambar, aktifkan baris bawah ini:
-                            // ->maxFiles(1)
-                            ->directory('berita/sampul')
-                            ->getUploadedFileNameForStorageUsing(fn($file) => 'berita-' . time() . '-' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()),
+                            ->multiple() // Dikunci multiple karena galeri menampung banyak foto
+                            ->directory('galeri/foto') // Diarahkan ke folder galeri asli
+                            ->getUploadedFileNameForStorageUsing(function (Get $get, $file) {
+                                $base = $get('keterangan_galeri');
+                                return Str::slug($base ?? 'galeri')
+                                    . '-' . time()
+                                    . '-' . bin2hex(random_bytes(4))
+                                    . '.' . $file->getClientOriginalExtension();
+                            }),
                     ])
                     ->using(function (\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model {
                         $oldFiles = is_array($record->file_foto) ? $record->file_foto : json_decode($record->file_foto, true) ?? [];
-
-                        // 💡 PERBAIKAN 2: Karena sudah multiple, $data['file_foto'] otomatis selalu berbentuk array
                         $newFiles = $data['file_foto'] ?? [];
 
-                        // Bersihkan file lama dari storage jika dihapus/diganti saat edit
+                        // Bersihkan foto lama dari storage jika dihapus di dalam form edit
                         foreach ((array)$oldFiles as $oldFile) {
                             if (!in_array($oldFile, $newFiles) && \Illuminate\Support\Facades\Storage::disk('public')->exists($oldFile)) {
                                 \Illuminate\Support\Facades\Storage::disk('public')->delete($oldFile);
                             }
                         }
 
-                        // Jalankan update data ke database secara aman
+                        // Update data ke database secara aman
                         $record->update($data);
 
                         return $record;
