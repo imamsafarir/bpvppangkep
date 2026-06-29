@@ -43,7 +43,8 @@ return new class extends Migration
             $table->longText('exception');
             $table->timestamp('failed_at')->useCurrent();
 
-            $table->index(['connection', 'queue', 'failed_at']);
+            // 🟢 MATIKAN BARIS INI DENGAN TANDA // AGAR TIDAK NABRAK BATAS 1000 BYTES CPANEL
+            // $table->index(['connection', 'queue', 'failed_at']);
         });
     }
 
