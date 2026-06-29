@@ -5,14 +5,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    {{-- Title Dinamis: Menggunakan @yield agar tiap halaman bisa mengganti judulnya --}}
-    <title>@yield('title', $settings?->website_name ?? 'BPVP Pangkep')</title>
+    
+    <title><?php echo $__env->yieldContent('title', $settings?->website_name ?? 'BPVP Pangkep'); ?></title>
 
-    {{-- Favicon Global --}}
+    
     <link rel="icon" type="image/png"
-        href="{{ $settings?->favicon_path ? asset('storage/' . $settings->favicon_path) : asset('default-favicon.png') }}">
+        href="<?php echo e($settings?->favicon_path ? asset('storage/' . $settings->favicon_path) : asset('default-favicon.png')); ?>">
 
-    {{-- Asset Global --}}
+    
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -177,30 +177,29 @@
         }
     </style>
 
-    {{-- Wadah CSS Tambahan jika suatu halaman butuh style unik --}}
-    @stack('styles')
+    
+    <?php echo $__env->yieldPushContent('styles'); ?>
 </head>
 
 <body class="bg-slate-50 text-slate-800" x-data="{ isScrolled: false, mobileMenu: false }" @scroll.window="isScrolled = window.scrollY > 40">
 
-    {{-- Memanggil Navbar Otomatis di Semua Halaman --}}
-    @include('layouts.navbar')
+    
+    <?php echo $__env->make('layouts.navbar', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-    {{-- Tempat Menyisipkan Konten Unik Masing-masing Halaman --}}
+    
     <main>
-        @yield('content')
+        <?php echo $__env->yieldContent('content'); ?>
     </main>
 
-    {{-- Memanggil Footer Otomatis di Semua Halaman --}}
-    @include('layouts.footer')
+    
+    <?php echo $__env->make('layouts.footer', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-    {{-- =========================================================
-       🟢 TEMPAT 2: MEMANGGIL WIDGET AKSESIBILITAS RAMAH DISABILITAS
-       ========================================================= --}}
-    @include('components.accessibility-widget')
+    
+    <?php echo $__env->make('components.accessibility-widget', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
 
-    {{-- Wadah Script Tambahan jika suatu halaman butuh JS unik --}}
-    @stack('scripts')
+    
+    <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
 
 </html>
+<?php /**PATH C:\Users\HP\Herd\bpvppangkep\resources\views/layouts/app.blade.php ENDPATH**/ ?>
