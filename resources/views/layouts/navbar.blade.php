@@ -161,10 +161,19 @@
                     @endif
                 @endforeach
 
+                <!-- Tombol Hubungi Kami (WhatsApp) -->
                 <a href="https://api.whatsapp.com/send?phone={{ $settings?->whatsapp_number ?? '6285343747243' }}&text=Halo%20BPVP%20Pangkep..."
                     target="_blank"
-                    class="px-4 py-2 rounded-xl text-xs font-black transition-all active:scale-95 shadow-md bg-amber-400 hover:bg-amber-500 text-slate-900 shadow-amber-500/10">
+                    class="flex items-center justify-center px-4 py-2 rounded-xl text-sm font-black transition-all active:scale-95 shadow-md bg-amber-400 hover:bg-amber-500 text-slate-900 shadow-amber-500/10">
                     Hubungi Kami
+                </a>
+
+                <!-- Tombol SP4N LAPOR! -->
+                <a href="https://www.lapor.go.id/" target="_blank"
+                    class="flex items-center justify-center px-4 py-2 rounded-xl transition-all active:scale-95 shadow-md bg-red-600 hover:bg-red-700 shadow-red-600/20">
+                    <!-- Tinggi logo disesuaikan menjadi h-6 agar setara dengan tinggi teks -->
+                    <img src="https://www.lapor.go.id/themes/lapor/assets/images/logo-white.png" alt="SP4N LAPOR!"
+                        class="h-6 w-auto object-contain">
                 </a>
             </nav>
 
@@ -208,12 +217,22 @@
             @endif
         @endforeach
 
-        <div class="pt-4">
+        <div class="pt-4 flex flex-col gap-3">
+
+            <!-- Tombol Hubungi Kami (WhatsApp) -->
             <a href="https://api.whatsapp.com/send?phone={{ $settings?->whatsapp_number ?? '6285343747243' }}&text=Halo%20BPVP%20Pangkep..."
                 target="_blank" @click="mobileMenu = false"
-                class="block text-center bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-amber-500/10 active:scale-98 transition-all">
+                class="flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-amber-500/10 active:scale-98 transition-all">
                 <i class="fab fa-whatsapp mr-1 text-sm"></i> Hubungi Kami
             </a>
+
+            <!-- Tombol SP4N LAPOR! -->
+            <a href="https://www.lapor.go.id/" target="_blank" @click="mobileMenu = false"
+                class="flex items-center justify-center bg-red-600 hover:bg-red-700 py-2.5 rounded-xl shadow-lg shadow-red-600/20 active:scale-98 transition-all">
+                <img src="https://www.lapor.go.id/themes/lapor/assets/images/logo-white.png" alt="SP4N LAPOR!"
+                    class="h-5 object-contain">
+            </a>
+
         </div>
     </div>
 </header>
