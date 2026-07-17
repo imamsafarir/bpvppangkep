@@ -229,6 +229,7 @@
                     @endif
                 @endforeach
 
+<<<<<<< HEAD
                 {{-- Tombol WhatsApp --}}
                 <a href="https://api.whatsapp.com/send?phone={{ $settings?->whatsapp_number ?? '6285343747243' }}&text=Halo%20BPVP%20Pangkep..."
                     target="_blank" rel="noopener noreferrer"
@@ -250,6 +251,21 @@
                         active:scale-95 xl:px-3">
                     <img src="https://www.lapor.go.id/themes/lapor/assets/images/logo-white.png" alt="SP4N LAPOR!"
                         class="h-4 w-auto shrink-0 object-contain xl:h-5 2xl:h-6">
+=======
+                <!-- Tombol Hubungi Kami (WhatsApp) -->
+                <a href="https://api.whatsapp.com/send?phone={{ $settings?->whatsapp_number ?? '6285343747243' }}&text=Halo%20BPVP%20Pangkep..."
+                    target="_blank"
+                    class="flex items-center justify-center px-4 py-2 rounded-xl text-sm font-black transition-all active:scale-95 shadow-md bg-amber-400 hover:bg-amber-500 text-slate-900 shadow-amber-500/10">
+                    Hubungi Kami
+                </a>
+
+                <!-- Tombol SP4N LAPOR! -->
+                <a href="https://www.lapor.go.id/" target="_blank"
+                    class="flex items-center justify-center px-4 py-2 rounded-xl transition-all active:scale-95 shadow-md bg-red-600 hover:bg-red-700 shadow-red-600/20">
+                    <!-- Tinggi logo disesuaikan menjadi h-6 agar setara dengan tinggi teks -->
+                    <img src="https://www.lapor.go.id/themes/lapor/assets/images/logo-white.png" alt="SP4N LAPOR!"
+                        class="h-6 w-auto object-contain">
+>>>>>>> 131f2ffb74adf2ef834922d439ce2bc3bd2da9ea
                 </a>
             </nav>
 
@@ -273,6 +289,7 @@
         </div>
     </div>
 
+<<<<<<< HEAD
     {{-- ============================================================= --}}
     {{-- NAVIGASI MOBILE --}}
     {{-- ============================================================= --}}
@@ -361,6 +378,57 @@
                         class="h-5 w-auto object-contain">
                 </a>
             </div>
+=======
+    <div x-show="mobileMenu" x-transition:enter="transition ease-out duration-200"
+        x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+        x-transition:leave="transition ease-in duration-150"
+        class="lg:hidden bg-[#15406a] border-t border-amber-400/30 px-5 pt-2 pb-6 space-y-1 shadow-xl absolute left-0 w-full text-white z-50"
+        style="display: none;" x-data="{ activeTab: null }">
+
+        <a href="/" @click="mobileMenu = false"
+            class="block font-bold text-amber-400 py-3 border-b border-white/10 text-sm">Beranda</a>
+
+        @foreach ($navigationMenu as $title => $menu)
+            @if ($menu['type'] === 'dropdown')
+                <div class="border-b border-white/10">
+                    <button @click="activeTab = (activeTab === '{{ $menu['key'] }}' ? null : '{{ $menu['key'] }}')"
+                        class="w-full flex justify-between items-center font-semibold text-slate-200 py-3 text-sm focus:outline-hidden cursor-pointer"
+                        :class="activeTab === '{{ $menu['key'] }}' ? 'text-amber-400' : ''">
+                        <span>{{ $title }}</span>
+                        <i class="fas text-xs transition-transform duration-200"
+                            :class="activeTab === '{{ $menu['key'] }}' ? 'fa-chevron-up text-amber-400' : 'fa-chevron-down'"></i>
+                    </button>
+                    <div x-show="activeTab === '{{ $menu['key'] }}'" x-transition
+                        class="pl-4 pb-2 space-y-2 text-xs font-medium text-slate-300 border-l border-amber-400/40 ml-1">
+                        @foreach ($menu['links'] as $label => $url)
+                            <a href="{{ $url }}" @click="mobileMenu = false"
+                                class="block py-1 hover:text-amber-400 transition-colors">{{ $label }}</a>
+                        @endforeach
+                    </div>
+                </div>
+            @else
+                <a href="{{ $menu['url'] }}" @click="mobileMenu = false"
+                    class="block font-semibold text-slate-200 hover:text-amber-400 py-3 border-b border-white/10 text-sm">{{ $title }}</a>
+            @endif
+        @endforeach
+
+        <div class="pt-4 flex flex-col gap-3">
+
+            <!-- Tombol Hubungi Kami (WhatsApp) -->
+            <a href="https://api.whatsapp.com/send?phone={{ $settings?->whatsapp_number ?? '6285343747243' }}&text=Halo%20BPVP%20Pangkep..."
+                target="_blank" @click="mobileMenu = false"
+                class="flex items-center justify-center bg-amber-400 hover:bg-amber-500 text-slate-900 font-bold py-2.5 rounded-xl text-xs shadow-lg shadow-amber-500/10 active:scale-98 transition-all">
+                <i class="fab fa-whatsapp mr-1 text-sm"></i> Hubungi Kami
+            </a>
+
+            <!-- Tombol SP4N LAPOR! -->
+            <a href="https://www.lapor.go.id/" target="_blank" @click="mobileMenu = false"
+                class="flex items-center justify-center bg-red-600 hover:bg-red-700 py-2.5 rounded-xl shadow-lg shadow-red-600/20 active:scale-98 transition-all">
+                <img src="https://www.lapor.go.id/themes/lapor/assets/images/logo-white.png" alt="SP4N LAPOR!"
+                    class="h-5 object-contain">
+            </a>
+
+>>>>>>> 131f2ffb74adf2ef834922d439ce2bc3bd2da9ea
         </div>
     </div>
 </header>
