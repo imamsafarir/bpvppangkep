@@ -7,6 +7,11 @@ use Filament\Widgets\ChartWidget;
 
 class JdihChart extends ChartWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->role !== 'shortlink';
+    }
+
     // ✅ Aman dari Fatal Error: Properti non-static sesuai dokumentasi resmi
     protected ?string $heading = '⚖️ Status Produk Hukum JDIH';
 

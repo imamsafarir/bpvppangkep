@@ -32,6 +32,11 @@ class ManageProfil extends Page
     protected static ?string $title = 'Profil Balai';
     protected static ?string $navigationLabel = 'Profil Balai';
 
+    public static function canAccess(): bool
+    {
+        return in_array(auth()->user()?->role, ['admin', 'staff']);
+    }
+
     /**
      * @var array<string, mixed> | null
      */

@@ -11,6 +11,11 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class WebsiteStatsOverview extends BaseWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->role !== 'shortlink';
+    }
+
     protected ?string $pollingInterval = '15s';
     protected static ?int $sort = 1;
 

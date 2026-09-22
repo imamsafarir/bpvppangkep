@@ -29,10 +29,11 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',       // 🟢 TAMBAHKAN BARIS INI
-        'username',   // Pastikan username juga ada karena balai pakai ini
+        'name',
+        'username',
         'email',
         'password',
+        'role',
     ];
     protected function casts(): array
     {

@@ -35,6 +35,11 @@ class ManageWebsiteSettings extends Page
     protected static ?string $title = 'Pengaturan Website';
     protected static ?string $navigationLabel = 'Pengaturan Website';
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->role === 'admin';
+    }
+
     public ?array $data = [];
 
     public function mount(): void

@@ -38,6 +38,11 @@ class ManagePelayananPublik extends Page
     protected static ?string $title = 'Kelola Pelayanan Publik';
     protected static ?string $navigationLabel = 'Pelayanan Publik';
 
+    public static function canAccess(): bool
+    {
+        return in_array(auth()->user()?->role, ['admin', 'staff']);
+    }
+
     public ?array $data = [];
 
     public function mount(): void

@@ -50,6 +50,11 @@ class ManageJdih extends Page
     protected static ?string $title = 'Kelola JDIH';
     protected static ?string $navigationLabel = 'JDIH / Produk Hukum';
 
+    public static function canAccess(): bool
+    {
+        return in_array(auth()->user()?->role, ['admin', 'staff']);
+    }
+
     public ?array $data = [];
 
     public function mount(): void

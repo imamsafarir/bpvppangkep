@@ -65,3 +65,10 @@ Route::prefix('berita-informasi')->name('berita.')->group(function () {
 Route::get('/galeri/{id}/download', [ProfilController::class, 'download'])->name('galeri.download');
 
 Route::get('/jdih', [ProfilController::class, 'jdih'])->name('jdih.index');
+
+// ==========================================
+// SHORTLINK & BARCODE PEGAWAI
+// ==========================================
+Route::get('/s/{code}', [\App\Http\Controllers\ShortlinkController::class, 'handle'])->name('shortlink.handle');
+Route::post('/s/{code}/submit', [\App\Http\Controllers\ShortlinkController::class, 'submit'])->name('shortlink.submit');
+Route::get('/s/{code}/qr', [\App\Http\Controllers\ShortlinkController::class, 'downloadQr'])->name('shortlink.qr');

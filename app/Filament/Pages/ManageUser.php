@@ -110,9 +110,10 @@ class ManageUser extends Page
                     Select::make('role')
                         ->label('Hak Akses / Role')
                         ->options([
-                            'admin' => '👑 Administrator',
-                            'staff' => '💼 Staf Balai',
-                            'user'  => '👥 Pengguna Biasa',
+                            'admin'     => '👑 Administrator',
+                            'staff'     => '💼 Staf Balai',
+                            'shortlink' => '🔗 Admin Shortlink',
+                            'user'      => '👥 Pengguna Biasa',
                         ])
                         ->required()
                         ->default('user')
@@ -143,8 +144,8 @@ class ManageUser extends Page
         $this->dispatch('refreshTables');
 
         Notification::make()
+            ->title('User Berhasil Didaftarkan')
             ->success()
-            ->title('Pengguna baru berhasil didaftarkan!')
             ->send();
     }
 
@@ -171,26 +172,24 @@ class DaftarUserTable extends TableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->query(
-                User::query()->latest()
-            )
+            ->query(User::query()->latest())
             ->columns([
                 TextColumn::make('name')
-                    ->label('Nama')
-                    ->icon('heroicon-m-user')
-                    ->iconColor('primary')
+                    ->label('Nama Lengkap')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->weight('bold'),
 
                 TextColumn::make('username')
                     ->label('Username')
-                    ->badge()
-                    ->color('info')
                     ->searchable()
-                    ->sortable(),
+                    ->sortable()
+                    ->badge()
+                    ->color('info'),
 
                 TextColumn::make('email')
-                    ->label('Email')
+                    ->label('Email Address')
+                    ->searchable()
                     ->icon('heroicon-m-envelope')
                     ->iconColor('gray'),
 
@@ -199,10 +198,11 @@ class DaftarUserTable extends TableWidget
                     ->label('Hak Akses')
                     ->badge()
                     ->color(fn(string $state): string => match ($state) {
-                        'admin' => 'danger',  // Merah kontras untuk Admin
-                        'staff' => 'warning', // Kuning/Amber untuk Staff
-                        'user'  => 'success', // Hijau untuk User biasa
-                        default => 'gray',
+                        'admin'     => 'danger',  // Merah kontras untuk Admin
+                        'shortlink' => 'info',    // Biru untuk Admin Shortlink
+                        'staff'     => 'warning', // Kuning/Amber untuk Staff
+                        'user'      => 'success', // Hijau untuk User biasa
+                        default     => 'gray',
                     })
                     ->searchable()
                     ->sortable(),
@@ -248,9 +248,10 @@ class DaftarUserTable extends TableWidget
                             Select::make('role')
                                 ->label('Hak Akses / Role')
                                 ->options([
-                                    'admin' => '👑 Administrator',
-                                    'staff' => '💼 Staf Balai',
-                                    'user'  => '👥 Pengguna Biasa',
+                                    'admin'     => '👑 Administrator',
+                                    'staff'     => '💼 Staf Balai',
+                                    'shortlink' => '🔗 Admin Shortlink',
+                                    'user'      => '👥 Pengguna Biasa',
                                 ])
                                 ->required()
                                 ->default('user'),

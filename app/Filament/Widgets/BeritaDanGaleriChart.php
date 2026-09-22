@@ -7,6 +7,11 @@ use Filament\Widgets\ChartWidget;
 
 class BeritaDanGaleriChart extends ChartWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->role !== 'shortlink';
+    }
+
     // ✅ SUDAH DIPERBAIKI: Menghapus keyword 'static' agar sesuai dengan dokumentasi resmi Filament
     protected ?string $heading = '📊 Proporsi Konten: Berita & Galeri';
 

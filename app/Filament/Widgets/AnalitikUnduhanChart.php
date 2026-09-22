@@ -8,6 +8,11 @@ use Filament\Widgets\ChartWidget;
 
 class AnalitikUnduhanChart extends ChartWidget
 {
+    public static function canView(): bool
+    {
+        return auth()->user()?->role !== 'shortlink';
+    }
+
     // Properti non-static sesuai standar resmi Filament
     protected ?string $heading = '📊 Statistik Akumulasi Unduhan Berkas';
 
