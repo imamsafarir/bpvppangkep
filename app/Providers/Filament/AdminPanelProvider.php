@@ -65,6 +65,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             // 🟢 TAMBAHKAN BARIS INI UNTUK MEMAKSA LIGHT MODE SAJA:
             ->darkMode(false)
+            ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
