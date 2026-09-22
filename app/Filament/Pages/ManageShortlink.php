@@ -6,6 +6,7 @@ use App\Models\Shortlink;
 use App\Models\ShortlinkLead;
 use BackedEnum;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 /* ===========================
@@ -31,6 +32,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\FileUpload;
 
 /* ===========================
 | TABLE & WIDGET
@@ -41,6 +43,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
 
 class ManageShortlink extends Page
 {
@@ -247,10 +250,165 @@ class DaftarShortlinkTable extends TableWidget
                 TextColumn::make('capture_fields')
                     ->label('Field Diminta')
                     ->badge()
+                    ->color('info')
+                    ->formatStateUsing(function ($state, Shortlink $record) {
+                        if (! $record->is_capture_active) {
+                            return '-';
+                        }
+
+                        $labels = [
+                            'nama'     => 'Nama',
+                            'whatsapp' => 'WhatsApp',
+                            'email'    => 'Email',
+                        ];
+
+                        if (is_string($state)) {
+                            $lower = strtolower(trim($state));
+                            return $labels[$lower] ?? ucfirst($lower);
+                        }
+
+                        return $state;
+                    }),
+            ])
+            ->headerActions([
+                // 1. Download Template Excel/CSV
+                Action::make('download_template')
+                    ->label('Template Excel')
+                    ->icon('heroicon-o-document-arrow-down')
                     ->color('gray')
-                    ->formatStateUsing(function ($state) {
-                        if (empty($state) || !is_array($state)) return '-';
-                        return implode(', ', array_map('ucfirst', $state));
+                    ->tooltip('Unduh template Excel / CSV untuk import data massal')
+                    ->url(route('admin.shortlink.template'))
+                    ->openUrlInNewTab(false),
+
+                // 2. Export Data Shortlink ke Excel/CSV
+                Action::make('export_shortlinks')
+                    ->label('Export Excel')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->tooltip('Unduh semua data shortlink & barcode ke file Excel / CSV')
+                    ->url(route('admin.shortlink.export'))
+                    ->openUrlInNewTab(false),
+
+                // 3. Import Data Shortlink dari File Excel/CSV
+                Action::make('import_shortlinks')
+                    ->label('Import Excel')
+                    ->icon('heroicon-o-arrow-up-tray')
+                    ->color('primary')
+                    ->modalHeading('📥 Import Data Shortlink & Barcode')
+                    ->modalDescription('Unggah file Excel / CSV sesuai format template. Kode shortlink 5 karakter dan barcode akan dibuat otomatis.')
+                    ->modalSubmitActionLabel('Mulai Import')
+                    ->form([
+                        FileUpload::make('file')
+                            ->label('Pilih File Excel / CSV')
+                            ->acceptedFileTypes(['text/csv', 'text/plain', 'application/vnd.ms-excel'])
+                            ->disk('local')
+                            ->directory('temp_imports')
+                            ->required()
+                            ->helperText('Gunakan file template yang diunduh dari tombol "Template Excel".'),
+                    ])
+                    ->action(function (array $data) {
+                        $disk = Storage::disk('local');
+                        $fileKey = $data['file'];
+
+                        // Cari file di disk local atau root storage path
+                        $fileContent = null;
+                        if ($disk->exists($fileKey)) {
+                            $fileContent = $disk->get($fileKey);
+                            $disk->delete($fileKey);
+                        } elseif (file_exists(storage_path('app/' . $fileKey))) {
+                            $fileContent = file_get_contents(storage_path('app/' . $fileKey));
+                            @unlink(storage_path('app/' . $fileKey));
+                        } elseif (file_exists(storage_path('app/private/' . $fileKey))) {
+                            $fileContent = file_get_contents(storage_path('app/private/' . $fileKey));
+                            @unlink(storage_path('app/private/' . $fileKey));
+                        }
+
+                        if ($fileContent === null) {
+                            Notification::make()
+                                ->title('Gagal mengimpor data')
+                                ->body('File unggahan tidak ditemukan.')
+                                ->danger()
+                                ->send();
+                            return;
+                        }
+
+                        // Parse isi file baris per baris
+                        $lines = preg_split("/\r\n|\n|\r/", trim($fileContent));
+                        $rows = array_filter(array_map(function ($line) {
+                            return str_getcsv($line, ';');
+                        }, $lines));
+
+                        // Jika format memakai koma biasa alih-alih titik koma
+                        if (isset($rows[0]) && count($rows[0]) === 1) {
+                            $rows = array_filter(array_map(function ($line) {
+                                return str_getcsv($line, ',');
+                            }, $lines));
+                        }
+
+                        if (empty($rows)) {
+                            Notification::make()
+                                ->title('File Kosong')
+                                ->body('File yang diunggah tidak memiliki data.')
+                                ->warning()
+                                ->send();
+                            return;
+                        }
+
+                        // Buang header
+                        array_shift($rows);
+
+                        $insertedCount = 0;
+                        $userId = Auth::id();
+
+                        foreach ($rows as $row) {
+                            $pegawaiName = isset($row[0]) ? trim($row[0]) : '';
+                            $destinationUrl = isset($row[1]) ? trim($row[1]) : '';
+                            $isCaptureRaw = isset($row[2]) ? strtoupper(trim($row[2])) : 'TIDAK';
+                            $captureFieldsRaw = isset($row[3]) ? trim($row[3]) : '';
+
+                            if (empty($pegawaiName) || empty($destinationUrl)) {
+                                continue;
+                            }
+
+                            if (! str_starts_with($destinationUrl, 'http://') && ! str_starts_with($destinationUrl, 'https://')) {
+                                $destinationUrl = 'https://' . $destinationUrl;
+                            }
+
+                            $isCaptureActive = in_array($isCaptureRaw, ['YA', 'YES', '1', 'TRUE', 'AKTIF']);
+
+                            $captureFields = [];
+                            if ($isCaptureActive && ! empty($captureFieldsRaw)) {
+                                $rawList = explode(',', $captureFieldsRaw);
+                                foreach ($rawList as $field) {
+                                    $cleaned = strtolower(trim($field));
+                                    if (in_array($cleaned, ['nama', 'whatsapp', 'email'])) {
+                                        $captureFields[] = $cleaned;
+                                    }
+                                }
+                            }
+
+                            if ($isCaptureActive && empty($captureFields)) {
+                                $captureFields = ['nama', 'whatsapp'];
+                            }
+
+                            Shortlink::create([
+                                'pegawai_name'      => $pegawaiName,
+                                'code'              => Shortlink::generateUniqueCode(5),
+                                'destination_url'   => $destinationUrl,
+                                'is_capture_active' => $isCaptureActive,
+                                'capture_fields'    => $captureFields,
+                                'is_active'         => true,
+                                'created_by'        => $userId,
+                            ]);
+
+                            $insertedCount++;
+                        }
+
+                        Notification::make()
+                            ->title('Import Data Berhasil!')
+                            ->body("Sebanyak {$insertedCount} shortlink & barcode baru telah otomatis dibuat.")
+                            ->success()
+                            ->send();
                     }),
             ])
             ->actions([
@@ -309,6 +467,9 @@ class DaftarShortlinkTable extends TableWidget
                     ]),
 
                 DeleteAction::make(),
+            ])
+            ->bulkActions([
+                DeleteBulkAction::make(),
             ]);
     }
 }
@@ -387,6 +548,9 @@ class DaftarLeadsTable extends TableWidget
             ])
             ->actions([
                 DeleteAction::make(),
+            ])
+            ->bulkActions([
+                DeleteBulkAction::make(),
             ]);
     }
 }

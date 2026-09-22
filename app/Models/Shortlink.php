@@ -23,6 +23,13 @@ class Shortlink extends Model
         'created_by',
     ];
 
+    protected $casts = [
+        'is_capture_active' => 'boolean',
+        'is_active' => 'boolean',
+        'capture_fields' => 'array',
+        'clicks_count' => 'integer',
+    ];
+
     protected function casts(): array
     {
         return [

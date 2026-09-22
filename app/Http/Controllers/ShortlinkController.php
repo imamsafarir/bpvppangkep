@@ -156,4 +156,203 @@ class ShortlinkController extends Controller
             'Content-Disposition' => 'attachment; filename="' . $filename . '"',
         ]);
     }
+
+    /**
+     * Download Template Excel/CSV untuk Import Data Shortlink
+     */
+    public function downloadTemplate()
+    {
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['admin', 'shortlink'])) {
+            abort(403);
+        }
+
+        $filename = 'Template_Import_Shortlink.csv';
+
+        $callback = function () {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF)); // BOM UTF-8
+
+            // Header Kolom (Tidak perlu kolom Kode, karena kode dibuat otomatis)
+            fputcsv($handle, [
+                'Nama Pegawai',
+                'Tautan Tujuan Asli',
+                'Aktifkan Pengambilan Data (YA/TIDAK)',
+                'Pilihan Data (Pisahkan koma: nama,whatsapp,email)',
+            ], ';');
+
+            // Contoh Data 1
+            fputcsv($handle, [
+                'Ahmad Dahlan, S.T.',
+                'https://bpvppangkep.kemnaker.go.id/pelayanan',
+                'YA',
+                'nama,whatsapp',
+            ], ';');
+
+            // Contoh Data 2
+            fputcsv($handle, [
+                'Siti Rahmawati, S.Kom',
+                'https://drive.google.com/drive/folders/contoh',
+                'TIDAK',
+                '',
+            ], ';');
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
+     * Export data shortlink ke file Excel/CSV
+     */
+    public function exportShortlinksCsv()
+    {
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['admin', 'shortlink'])) {
+            abort(403);
+        }
+
+        $query = Shortlink::query()->with(['user'])->withCount('leads')->latest();
+
+        if ($user->role !== 'admin') {
+            $query->where('created_by', $user->id);
+        }
+
+        $shortlinks = $query->get();
+        $filename = 'Data_Shortlink_Pegawai_' . date('Y-m-d_His') . '.csv';
+
+        $callback = function () use ($shortlinks) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($handle, [
+                'No',
+                'Nama Pegawai',
+                'Kode Shortlink',
+                'Tautan Shortlink',
+                'Tautan Tujuan Asli',
+                'Total Klik',
+                'Total Data Masuk',
+                'Form Pengambilan Data',
+                'Field Diminta',
+                'Dibuat Oleh',
+                'Tanggal Dibuat',
+            ], ';');
+
+            foreach ($shortlinks as $index => $item) {
+                $fields = is_array($item->capture_fields) ? implode(', ', $item->capture_fields) : '-';
+                fputcsv($handle, [
+                    $index + 1,
+                    $item->pegawai_name,
+                    $item->code,
+                    $item->short_url,
+                    $item->destination_url,
+                    $item->clicks_count,
+                    $item->leads_count,
+                    $item->is_capture_active ? 'Aktif' : 'Nonaktif',
+                    $fields,
+                    $item->user?->name ?? '-',
+                    $item->created_at ? $item->created_at->format('d-m-Y H:i:s') : '-',
+                ], ';');
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
+
+    /**
+     * Import shortlink dari file Excel/CSV
+     */
+    public function importShortlinks(Request $request)
+    {
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['admin', 'shortlink'])) {
+            abort(403);
+        }
+
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt|max:5120',
+        ]);
+
+        $file = $request->file('file');
+        $path = $file->getRealPath();
+
+        $rows = array_map(function ($line) {
+            return str_getcsv($line, ';');
+        }, file($path));
+
+        // Jika baris dipisahkan dengan koma biasa bukan titik koma, parsing ulang
+        if (isset($rows[0]) && count($rows[0]) === 1) {
+            $rows = array_map(function ($line) {
+                return str_getcsv($line, ',');
+            }, file($path));
+        }
+
+        if (empty($rows)) {
+            return back()->with('error', 'File template kosong!');
+        }
+
+        // Hapus header baris pertama
+        array_shift($rows);
+
+        $insertedCount = 0;
+
+        foreach ($rows as $row) {
+            $pegawaiName = isset($row[0]) ? trim($row[0]) : '';
+            $destinationUrl = isset($row[1]) ? trim($row[1]) : '';
+            $isCaptureRaw = isset($row[2]) ? strtoupper(trim($row[2])) : 'TIDAK';
+            $captureFieldsRaw = isset($row[3]) ? trim($row[3]) : '';
+
+            // Abaikan baris kosong
+            if (empty($pegawaiName) || empty($destinationUrl)) {
+                continue;
+            }
+
+            // Pastikan URL valid
+            if (! str_starts_with($destinationUrl, 'http://') && ! str_starts_with($destinationUrl, 'https://')) {
+                $destinationUrl = 'https://' . $destinationUrl;
+            }
+
+            $isCaptureActive = in_array($isCaptureRaw, ['YA', 'YES', '1', 'TRUE', 'AKTIF']);
+
+            $captureFields = [];
+            if ($isCaptureActive && ! empty($captureFieldsRaw)) {
+                $rawList = explode(',', $captureFieldsRaw);
+                foreach ($rawList as $field) {
+                    $cleanedField = strtolower(trim($field));
+                    if (in_array($cleanedField, ['nama', 'whatsapp', 'email'])) {
+                        $captureFields[] = $cleanedField;
+                    }
+                }
+            }
+
+            if ($isCaptureActive && empty($captureFields)) {
+                $captureFields = ['nama', 'whatsapp'];
+            }
+
+            Shortlink::create([
+                'pegawai_name'      => $pegawaiName,
+                'code'              => Shortlink::generateUniqueCode(5), // Kode 5 karakter acak otomatis
+                'destination_url'   => $destinationUrl,
+                'is_capture_active' => $isCaptureActive,
+                'capture_fields'    => $captureFields,
+                'is_active'         => true,
+                'created_by'        => $user->id,
+            ]);
+
+            $insertedCount++;
+        }
+
+        return redirect()->to(url('/admin/manage-shortlink'))
+            ->with('success', "Berhasil mengimpor {$insertedCount} shortlink & barcode baru!");
+    }
 }

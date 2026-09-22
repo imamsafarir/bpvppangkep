@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulir Pengunjung - {{ $shortlink->pegawai_name }}</title>
+    <title>Formulir Pengunjung - BPVP Pangkep</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,8 +34,6 @@
                 </svg>
             </div>
             <h1 class="text-xl font-bold tracking-tight">Selamat Datang!</h1>
-            <p class="text-indigo-100 text-sm mt-1">Tautan Resmi dari <span
-                    class="font-semibold text-white">{{ $shortlink->pegawai_name }}</span></p>
         </div>
 
         <!-- Form Body -->
@@ -60,7 +58,7 @@
                 @if (in_array('nama', $fields))
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Nama
-                            Lengkap</label>
+                            Lengkap <span class="text-rose-500">*</span></label>
                         <div class="relative">
                             <span
                                 class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -79,7 +77,7 @@
                 @if (in_array('whatsapp', $fields))
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Nomor
-                            WhatsApp</label>
+                            WhatsApp <span class="text-rose-500">*</span></label>
                         <div class="relative">
                             <span
                                 class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -99,7 +97,7 @@
                 @if (in_array('email', $fields))
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">Alamat
-                            Email</label>
+                            Email <span class="text-rose-500">*</span></label>
                         <div class="relative">
                             <span
                                 class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
@@ -116,8 +114,9 @@
                     </div>
                 @endif
 
-                <button type="submit"
-                    class="w-full py-3.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold text-sm shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 group mt-2">
+                <button type="submit" id="btn-submit"
+                    class="w-full py-3.5 px-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 group mt-2 cursor-not-allowed bg-slate-200 text-slate-400 shadow-none"
+                    disabled>
                     <span>Lanjutkan ke Tautan</span>
                     <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24">
@@ -133,6 +132,51 @@
         </div>
     </div>
 
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const btnSubmit = document.getElementById('btn-submit');
+            const requiredInputs = form.querySelectorAll('input[required]');
+
+            function checkFormValidity() {
+                let isValid = true;
+
+                requiredInputs.forEach(function(input) {
+                    if (!input.value.trim()) {
+                        isValid = false;
+                    }
+                    if (input.type === 'email' && input.value.trim()) {
+                        // Cek format email dasar
+                        const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (!emailPattern.test(input.value.trim())) {
+                            isValid = false;
+                        }
+                    }
+                });
+
+                if (isValid) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.classList.remove('cursor-not-allowed', 'bg-slate-200', 'text-slate-400',
+                        'shadow-none');
+                    btnSubmit.classList.add('cursor-pointer', 'bg-indigo-600', 'hover:bg-indigo-700',
+                        'active:bg-indigo-800', 'text-white', 'shadow-lg', 'shadow-indigo-200');
+                } else {
+                    btnSubmit.disabled = true;
+                    btnSubmit.classList.add('cursor-not-allowed', 'bg-slate-200', 'text-slate-400', 'shadow-none');
+                    btnSubmit.classList.remove('cursor-pointer', 'bg-indigo-600', 'hover:bg-indigo-700',
+                        'active:bg-indigo-800', 'text-white', 'shadow-lg', 'shadow-indigo-200');
+                }
+            }
+
+            requiredInputs.forEach(function(input) {
+                input.addEventListener('input', checkFormValidity);
+                input.addEventListener('change', checkFormValidity);
+            });
+
+            // Jalankan cek pertama saat halaman selesai dimuat (misal jika ada old value dari session)
+            checkFormValidity();
+        });
+    </script>
 </body>
 
 </html>

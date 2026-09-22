@@ -73,3 +73,7 @@ Route::get('/s/{code}', [\App\Http\Controllers\ShortlinkController::class, 'hand
 Route::post('/s/{code}/submit', [\App\Http\Controllers\ShortlinkController::class, 'submit'])->name('shortlink.submit');
 Route::get('/s/{code}/qr', [\App\Http\Controllers\ShortlinkController::class, 'downloadQr'])->name('shortlink.qr');
 Route::get('/admin/shortlinks/leads/export', [\App\Http\Controllers\ShortlinkController::class, 'exportLeadsCsv'])->middleware('auth')->name('admin.shortlink.leads.export');
+
+Route::get('/admin/shortlinks/template/download', [\App\Http\Controllers\ShortlinkController::class, 'downloadTemplate'])->middleware('auth')->name('admin.shortlink.template');
+Route::get('/admin/shortlinks/export', [\App\Http\Controllers\ShortlinkController::class, 'exportShortlinksCsv'])->middleware('auth')->name('admin.shortlink.export');
+Route::post('/admin/shortlinks/import', [\App\Http\Controllers\ShortlinkController::class, 'importShortlinks'])->middleware('auth')->name('admin.shortlink.import');
