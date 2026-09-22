@@ -14,6 +14,7 @@ use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
+use Filament\Support\Enums\Width;
 
 /* ===========================
 | SCHEMA & FORM
@@ -56,6 +57,11 @@ class ManageShortlink extends Page
     public static function canAccess(): bool
     {
         return in_array(Auth::user()?->role, ['admin', 'shortlink']);
+    }
+
+    public function getMaxContentWidth(): Width | string | null
+    {
+        return Width::Full;
     }
 
     public ?array $data = [];
@@ -179,8 +185,15 @@ class DaftarShortlinkTable extends TableWidget
 
     public function table(Table $table): Table
     {
+        // 🔒 Superadmin (admin) melihat semua data, adminshortlink hanya melihat miliknya sendiri
+        $query = Shortlink::query()->with(['user'])->withCount('leads')->latest();
+
+        if (Auth::user()?->role !== 'admin') {
+            $query->where('created_by', Auth::id());
+        }
+
         return $table
-            ->query(Shortlink::query()->withCount('leads')->latest())
+            ->query($query)
             ->columns([
                 TextColumn::make('pegawai_name')
                     ->label('Nama Pegawai')
@@ -188,6 +201,13 @@ class DaftarShortlinkTable extends TableWidget
                     ->sortable()
                     ->weight('bold')
                     ->icon('heroicon-m-user'),
+
+                TextColumn::make('user.name')
+                    ->label('Dibuat Oleh')
+                    ->badge()
+                    ->color('gray')
+                    ->visible(fn() => Auth::user()?->role === 'admin')
+                    ->sortable(),
 
                 TextColumn::make('code')
                     ->label('Shortlink')
@@ -200,7 +220,7 @@ class DaftarShortlinkTable extends TableWidget
 
                 TextColumn::make('destination_url')
                     ->label('Tujuan Asli')
-                    ->limit(35)
+                    ->limit(30)
                     ->tooltip(fn(Shortlink $record): string => $record->destination_url)
                     ->icon('heroicon-m-arrow-top-right-on-square')
                     ->color('gray'),
@@ -213,7 +233,7 @@ class DaftarShortlinkTable extends TableWidget
                     ->alignCenter(),
 
                 TextColumn::make('leads_count')
-                    ->label('Total Data Masuk')
+                    ->label('Data Masuk')
                     ->badge()
                     ->color('info')
                     ->sortable()
@@ -234,7 +254,7 @@ class DaftarShortlinkTable extends TableWidget
                     }),
             ])
             ->actions([
-                // Tombol Lihat / Download QR Code
+                // 1. Tombol Modal Pratinjau Barcode / QR Code
                 Action::make('qrCode')
                     ->label('Barcode')
                     ->icon('heroicon-o-qr-code')
@@ -242,9 +262,16 @@ class DaftarShortlinkTable extends TableWidget
                     ->modalHeading(fn(Shortlink $record) => 'QR Code: ' . $record->pegawai_name)
                     ->modalDescription(fn(Shortlink $record) => 'Tautan: ' . $record->short_url)
                     ->modalContent(function (Shortlink $record) {
-                        $svg = QrCode::size(240)->margin(2)->generate($record->short_url);
+                        $rawSvg = (string) QrCode::format('svg')
+                            ->size(220)
+                            ->margin(2)
+                            ->errorCorrection('H')
+                            ->generate($record->short_url);
+
+                        $qrBase64 = 'data:image/svg+xml;base64,' . base64_encode($rawSvg);
+
                         return view('filament.components.qr-modal', [
-                            'svg'       => $svg,
+                            'qrBase64'  => $qrBase64,
                             'shortlink' => $record,
                         ]);
                     })
@@ -300,8 +327,17 @@ class DaftarLeadsTable extends TableWidget
 
     public function table(Table $table): Table
     {
+        // 🔒 Superadmin (admin) melihat semua leads, adminshortlink hanya melihat data leads dari shortlink miliknya
+        $query = ShortlinkLead::query()->with('shortlink')->latest();
+
+        if (Auth::user()?->role !== 'admin') {
+            $query->whereHas('shortlink', function ($q) {
+                $q->where('created_by', Auth::id());
+            });
+        }
+
         return $table
-            ->query(ShortlinkLead::query()->with('shortlink')->latest())
+            ->query($query)
             ->columns([
                 TextColumn::make('shortlink.pegawai_name')
                     ->label('Link Pegawai')
@@ -340,6 +376,14 @@ class DaftarLeadsTable extends TableWidget
                     ->label('Waktu Akses')
                     ->dateTime('d M Y, H:i')
                     ->sortable(),
+            ])
+            ->headerActions([
+                Action::make('export_excel')
+                    ->label('Download Data (Excel)')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->url(route('admin.shortlink.leads.export'))
+                    ->openUrlInNewTab(false),
             ])
             ->actions([
                 DeleteAction::make(),

@@ -95,4 +95,65 @@ class ShortlinkController extends Controller
             ->header('Content-Type', 'image/svg+xml')
             ->header('Content-Disposition', 'attachment; filename="' . $filename . '"');
     }
+
+    /**
+     * Export data pengunjung (leads) ke format CSV / Excel
+     */
+    public function exportLeadsCsv()
+    {
+        $user = auth()->user();
+        if (! $user || ! in_array($user->role, ['admin', 'shortlink'])) {
+            abort(403);
+        }
+
+        $query = ShortlinkLead::query()->with('shortlink')->latest();
+
+        // Jika bukan superadmin, hanya unduh leads dari shortlink miliknya
+        if ($user->role !== 'admin') {
+            $query->whereHas('shortlink', function ($q) use ($user) {
+                $q->where('created_by', $user->id);
+            });
+        }
+
+        $leads = $query->get();
+        $filename = 'Data_Pengunjung_Shortlink_' . date('Y-m-d_His') . '.csv';
+
+        $callback = function () use ($leads) {
+            $handle = fopen('php://output', 'w');
+            // Tambahkan BOM untuk kompatibilitas Microsoft Excel agar karakter UTF-8 terbaca rapi
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            // Header Kolom
+            fputcsv($handle, [
+                'No',
+                'Nama Pegawai / Pemilik Link',
+                'Kode Shortlink',
+                'Nama Pengunjung',
+                'Nomor WhatsApp',
+                'Email',
+                'Alamat IP',
+                'Waktu Akses',
+            ], ';');
+
+            foreach ($leads as $index => $lead) {
+                fputcsv($handle, [
+                    $index + 1,
+                    $lead->shortlink?->pegawai_name ?? '-',
+                    $lead->shortlink?->code ?? '-',
+                    $lead->nama ?? '-',
+                    $lead->whatsapp ? "'" . $lead->whatsapp : '-', // Beri kutip depan agar Excel tidak mengubah 08xx jadi angka hilang nolnya
+                    $lead->email ?? '-',
+                    $lead->ip_address ?? '-',
+                    $lead->created_at ? $lead->created_at->format('d-m-Y H:i:s') : '-',
+                ], ';');
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ]);
+    }
 }

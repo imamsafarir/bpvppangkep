@@ -56,6 +56,8 @@ class AdminPanelProvider extends PanelProvider
             // 🟢 MODIFIKASI FORM LOGIN (HANYA USERNAME)
             ->login(\App\Filament\Pages\Auth\CustomLogin::class)
 
+            ->homeUrl(fn(): string => auth()->user()?->role === 'shortlink' ? url('/admin/manage-shortlink') : url('/admin'))
+
             ->brandName('Admin Website BPVP Pangkep')
             ->favicon($faviconUrl)
             ->colors([
@@ -66,7 +68,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
-                Dashboard::class,
+                \App\Filament\Pages\Dashboard::class,
             ])
             ->widgets([
                 WebsiteStatsOverview::class,
