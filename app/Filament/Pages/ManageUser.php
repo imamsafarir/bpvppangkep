@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\User;
+use App\Models\AuthenticationLog;
 use BackedEnum;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
@@ -153,6 +154,7 @@ class ManageUser extends Page
     {
         return [
             DaftarUserTable::class,
+            DaftarLogAktivitasTable::class,
         ];
     }
 }
@@ -259,5 +261,80 @@ class DaftarUserTable extends TableWidget
                     ]),
                 DeleteAction::make(),
             ]);
+    }
+}
+
+/**
+ * =========================================================
+ * WIDGET: LOG AKTIVITAS LOGIN & LOGOUT USER
+ * =========================================================
+ */
+class DaftarLogAktivitasTable extends TableWidget
+{
+    protected static ?string $heading = '🕒 Riwayat Aktivitas Login & Logout Pengguna';
+    protected int | string | array $columnSpan = 'full';
+
+    protected $listeners = ['refreshTables' => '$refresh'];
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->query(AuthenticationLog::query()->with('user')->latest('id'))
+            ->columns([
+                TextColumn::make('created_at')
+                    ->label('Waktu Kejadian')
+                    ->dateTime('d M Y, H:i:s')
+                    ->sortable()
+                    ->icon('heroicon-m-clock'),
+
+                TextColumn::make('event_type')
+                    ->label('Aktivitas')
+                    ->badge()
+                    ->color(fn(string $state): string => match ($state) {
+                        'login'  => 'success',
+                        'logout' => 'warning',
+                        default  => 'gray',
+                    })
+                    ->formatStateUsing(fn(string $state): string => match ($state) {
+                        'login'  => '🟢 Masuk (Login)',
+                        'logout' => '🟡 Keluar (Logout)',
+                        default  => ucfirst($state),
+                    })
+                    ->sortable(),
+
+                TextColumn::make('user.name')
+                    ->label('Nama Pengguna')
+                    ->default(fn(AuthenticationLog $record) => $record->username ?? '-')
+                    ->searchable()
+                    ->sortable()
+                    ->weight('semibold')
+                    ->icon('heroicon-m-user'),
+
+                TextColumn::make('user.role')
+                    ->label('Role')
+                    ->badge()
+                    ->color(fn(?string $state): string => match ($state) {
+                        'admin'     => 'danger',
+                        'shortlink' => 'info',
+                        'staff'     => 'warning',
+                        'user'      => 'success',
+                        default     => 'gray',
+                    })
+                    ->default('-'),
+
+                TextColumn::make('ip_address')
+                    ->label('Alamat IP')
+                    ->icon('heroicon-m-globe-alt')
+                    ->color('gray')
+                    ->searchable(),
+
+                TextColumn::make('user_agent')
+                    ->label('Browser / Perangkat')
+                    ->limit(50)
+                    ->tooltip(fn(AuthenticationLog $record): ?string => $record->user_agent)
+                    ->color('gray')
+                    ->size('xs'),
+            ])
+            ->paginated([10, 25, 50]);
     }
 }
