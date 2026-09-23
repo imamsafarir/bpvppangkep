@@ -287,7 +287,7 @@ class DaftarShortlinkTable extends TableWidget
                     ->label('Export Excel')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
-                    ->tooltip('Unduh semua data shortlink & barcode ke file Excel / CSV')
+                    ->tooltip('Unduh semua data shortlink & gambar barcode ke file Excel (.xlsx)')
                     ->url(route('admin.shortlink.export'))
                     ->openUrlInNewTab(false),
 
@@ -537,6 +537,7 @@ class DaftarLeadsTable extends TableWidget
                     ->label('Download Data (Excel)')
                     ->icon('heroicon-o-arrow-down-tray')
                     ->color('success')
+                    ->tooltip('Unduh data pengunjung beserta gambar barcode/QR code ke file Excel (.xlsx)')
                     ->url(route('admin.shortlink.leads.export'))
                     ->openUrlInNewTab(false),
             ])

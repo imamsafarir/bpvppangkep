@@ -4,6 +4,7 @@ namespace App\Modules\Shortlink\Http\Controllers;
 
 use App\Modules\Shortlink\Models\Shortlink;
 use App\Modules\Shortlink\Models\ShortlinkLead;
+use App\Modules\Shortlink\Services\ShortlinkExcelService;
 use Illuminate\Http\Request;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
@@ -115,43 +116,8 @@ class ShortlinkController
         }
 
         $leads = $query->get();
-        $filename = 'Data_Pengunjung_Shortlink_' . date('Y-m-d_His') . '.csv';
 
-        $callback = function () use ($leads) {
-            $handle = fopen('php://output', 'w');
-            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
-
-            fputcsv($handle, [
-                'No',
-                'Nama Pegawai / Pemilik Link',
-                'Kode Shortlink',
-                'Nama Pengunjung',
-                'Nomor WhatsApp',
-                'Email',
-                'Alamat IP',
-                'Waktu Akses',
-            ], ';');
-
-            foreach ($leads as $index => $lead) {
-                fputcsv($handle, [
-                    $index + 1,
-                    $lead->shortlink?->pegawai_name ?? '-',
-                    $lead->shortlink?->code ?? '-',
-                    $lead->nama ?? '-',
-                    $lead->whatsapp ? "'" . $lead->whatsapp : '-',
-                    $lead->email ?? '-',
-                    $lead->ip_address ?? '-',
-                    $lead->created_at ? $lead->created_at->format('d-m-Y H:i:s') : '-',
-                ], ';');
-            }
-
-            fclose($handle);
-        };
-
-        return response()->stream($callback, 200, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ]);
+        return ShortlinkExcelService::exportLeads($leads);
     }
 
     /**
@@ -217,50 +183,8 @@ class ShortlinkController
         }
 
         $shortlinks = $query->get();
-        $filename = 'Data_Shortlink_Pegawai_' . date('Y-m-d_His') . '.csv';
 
-        $callback = function () use ($shortlinks) {
-            $handle = fopen('php://output', 'w');
-            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
-
-            fputcsv($handle, [
-                'No',
-                'Nama Pegawai',
-                'Kode Shortlink',
-                'Tautan Shortlink',
-                'Tautan Tujuan Asli',
-                'Total Klik',
-                'Total Data Masuk',
-                'Form Pengambilan Data',
-                'Field Diminta',
-                'Dibuat Oleh',
-                'Tanggal Dibuat',
-            ], ';');
-
-            foreach ($shortlinks as $index => $item) {
-                $fields = is_array($item->capture_fields) ? implode(', ', $item->capture_fields) : '-';
-                fputcsv($handle, [
-                    $index + 1,
-                    $item->pegawai_name,
-                    $item->code,
-                    $item->short_url,
-                    $item->destination_url,
-                    $item->clicks_count,
-                    $item->leads_count,
-                    $item->is_capture_active ? 'Aktif' : 'Nonaktif',
-                    $fields,
-                    $item->user?->name ?? '-',
-                    $item->created_at ? $item->created_at->format('d-m-Y H:i:s') : '-',
-                ], ';');
-            }
-
-            fclose($handle);
-        };
-
-        return response()->stream($callback, 200, [
-            'Content-Type'        => 'text/csv; charset=UTF-8',
-            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
-        ]);
+        return ShortlinkExcelService::exportShortlinks($shortlinks);
     }
 
     /**
