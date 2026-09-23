@@ -1,0 +1,17 @@
+{
+    "name": "Shortlink",
+    "slug": "shortlink",
+    "description": "Manajemen shortlink & barcode dengan lead capture form untuk pegawai BPVP Pangkep.",
+    "version": "1.0.0",
+    "author": "BPVP Pangkep",
+    "active": true,
+    "navigation_group": "Shortlink & Barcode",
+    "navigation_sort": 2,
+    "requires": [],
+    "roles": ["admin", "shortlink"],
+    "routes": {
+        "web": "Routes/web.php"
+    },
+    "views_namespace": "shortlink",
+    "migrations": "Database/Migrations"
+}

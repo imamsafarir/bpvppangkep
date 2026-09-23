@@ -1,0 +1,21 @@
+{
+    "name": "Website",
+    "slug": "website",
+    "description": "Modul website publik BPVP Pangkep: Profil, Berita & Galeri, Informasi Publik, JDIH, Pelayanan Publik.",
+    "version": "1.0.0",
+    "author": "BPVP Pangkep",
+    "active": true,
+    "navigation_group": "Website",
+    "navigation_sort": 1,
+    "requires": ["core"],
+    "roles": ["admin", "staff"],
+    "filament_pages": [
+        "ManageProfil",
+        "ManageBeritaDanGaleri",
+        "ManageInformasi",
+        "ManageInformasiPublik",
+        "ManageJdih",
+        "ManagePelayananPublik",
+        "ManageWebsiteSettings"
+    ]
+}

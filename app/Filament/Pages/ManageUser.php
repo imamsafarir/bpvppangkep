@@ -54,6 +54,16 @@ class ManageUser extends Page
     /**
      * Proteksi halaman agar hanya level 'admin' yang bisa masuk rute ini
      */
+
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Pengaturan Sistem';
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return 2;
+    }
     public static function canAccess(): bool
     {
         return Auth::user()?->role === 'admin';

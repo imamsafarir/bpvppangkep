@@ -12,11 +12,11 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
-use App\Filament\Widgets\WebsiteStatsOverview;
-use App\Filament\Widgets\BeritaDanGaleriChart;
-use App\Filament\Widgets\InformasiPublikChart;
-use App\Filament\Widgets\JdihChart;
-use App\Filament\Widgets\AnalitikUnduhanChart;
+use App\Modules\Website\Filament\Widgets\WebsiteStatsOverview;
+use App\Modules\Website\Filament\Widgets\BeritaDanGaleriChart;
+use App\Modules\Website\Filament\Widgets\InformasiPublikChart;
+use App\Modules\Website\Filament\Widgets\JdihChart;
+use App\Modules\Website\Filament\Widgets\AnalitikUnduhanChart;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 // use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -26,7 +26,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use App\Models\WebsiteSetting;
+use App\Modules\Website\Models\WebsiteSetting;
 use Filament\Pages\Auth\Login;
 use Filament\Forms\Components\TextInput;
 
@@ -68,6 +68,8 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
+            ->discoverPages(in: app_path('Modules/Shortlink/Filament/Pages'), for: 'App\Modules\Shortlink\Filament\Pages')
+            ->discoverPages(in: app_path('Modules/Website/Filament/Pages'), for: 'App\Modules\Website\Filament\Pages')
             ->pages([
                 \App\Filament\Pages\Dashboard::class,
             ])

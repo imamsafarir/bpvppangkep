@@ -1,0 +1,14 @@
+{
+    "name": "Core",
+    "slug": "core",
+    "description": "Pondasi bersama aplikasi: User, AuthenticationLog, ManageUser, pengaturan auth events.",
+    "version": "1.0.0",
+    "author": "BPVP Pangkep",
+    "active": true,
+    "navigation_group": "Pengaturan Sistem",
+    "navigation_sort": 99,
+    "requires": [],
+    "roles": ["admin"],
+    "models": ["User", "AuthenticationLog"],
+    "filament_pages": ["ManageUser", "Dashboard"]
+}
