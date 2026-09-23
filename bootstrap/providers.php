@@ -12,4 +12,5 @@ return [
     */
     App\Modules\Website\WebsiteServiceProvider::class,
     App\Modules\Shortlink\ShortlinkServiceProvider::class,
+    App\Modules\TimSosmed\TimSosmedServiceProvider::class,
 ];

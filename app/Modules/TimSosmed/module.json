@@ -1,0 +1,25 @@
+{
+    "name": "TimSosmed",
+    "slug": "timsosmed",
+    "description": "Modul Manajemen Tim Media Sosial BPVP Pangkep (Alur kerja produksi konten, analitik Meta/Instagram, kalender jadwal, dan laporan).",
+    "version": "1.0.0",
+    "author": "BPVP Pangkep",
+    "active": true,
+    "navigation_group": "Tim Media Sosial",
+    "navigation_sort": 3,
+    "requires": [],
+    "roles": [
+        "admin",
+        "super_admin",
+        "admin_platform",
+        "planner",
+        "editor",
+        "instruktur",
+        "pegawai"
+    ],
+    "routes": {
+        "web": "Routes/web.php"
+    },
+    "views_namespace": "timsosmed",
+    "migrations": "Database/Migrations"
+}

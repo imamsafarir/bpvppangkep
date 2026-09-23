@@ -42,7 +42,7 @@
                 Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan.
             </p>
 
-            @if ($errors->any())
+            @if (!empty($errors) && $errors->any())
                 <div class="mb-5 p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
                     <ul class="list-disc list-inside space-y-1">
                         @foreach ($errors->all() as $error)
