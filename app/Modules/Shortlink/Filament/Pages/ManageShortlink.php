@@ -39,12 +39,14 @@ use Filament\Forms\Components\FileUpload;
 | TABLE & WIDGET
 =========================== */
 use Filament\Widgets\TableWidget;
+use Filament\Tables\Enums\PaginationMode;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Actions\EditAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
+use Illuminate\Database\Eloquent\Builder;
 
 class ManageShortlink extends Page
 {
@@ -222,11 +224,15 @@ class DaftarShortlinkTable extends TableWidget
     protected static ?string $heading = '📋 Daftar Shortlink Pegawai & Barcode';
     protected int | string | array $columnSpan = 'full';
 
+    protected string $view = 'shortlink::filament.table-widget';
+
     protected $listeners = ['refreshShortlinkTables' => '$refresh'];
 
     public function table(Table $table): Table
     {
-        $query = Shortlink::query()->with(['user'])->withCount('leads')->latest();
+        $query = Shortlink::query()
+            ->with(['user'])
+            ->withCount('leads');
 
         if (! (Auth::user()?->isAdmin() ?? false)) {
             $query->where('created_by', Auth::id());
@@ -234,6 +240,10 @@ class DaftarShortlinkTable extends TableWidget
 
         return $table
             ->query($query)
+            ->defaultSort('created_at', 'desc')
+            ->paginationMode(PaginationMode::Default)
+            ->paginationPageOptions([10, 25, 50, 100])
+            ->defaultPaginationPageOption(10)
             ->columns([
                 TextColumn::make('pegawai_name')
                     ->label('Nama Pegawai')
@@ -256,14 +266,16 @@ class DaftarShortlinkTable extends TableWidget
                     ->formatStateUsing(fn(string $state): string => url('/s/' . $state))
                     ->copyable()
                     ->copyMessage('Shortlink berhasil disalin!')
-                    ->copyableState(fn(Shortlink $record): string => $record->short_url),
+                    ->copyableState(fn(Shortlink $record): string => $record->short_url)
+                    ->sortable(),
 
                 TextColumn::make('destination_url')
                     ->label('Tujuan Asli')
                     ->limit(30)
                     ->tooltip(fn(Shortlink $record): string => $record->destination_url)
                     ->icon('heroicon-m-arrow-top-right-on-square')
-                    ->color('gray'),
+                    ->color('gray')
+                    ->sortable(),
 
                 TextColumn::make('clicks_count')
                     ->label('Total Klik')
@@ -276,12 +288,13 @@ class DaftarShortlinkTable extends TableWidget
                     ->label('Data Masuk')
                     ->badge()
                     ->color('info')
-                    ->sortable()
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('leads_count', $direction))
                     ->alignCenter(),
 
                 IconColumn::make('is_capture_active')
                     ->label('Ambil Data')
                     ->boolean()
+                    ->sortable()
                     ->alignCenter(),
 
                 TextColumn::make('capture_fields')
@@ -306,6 +319,13 @@ class DaftarShortlinkTable extends TableWidget
 
                         return $state;
                     }),
+
+                TextColumn::make('created_at')
+                    ->label('Tanggal Dibuat')
+                    ->dateTime('d M Y, H:i')
+                    ->sortable()
+                    ->color('gray')
+                    ->size('xs'),
             ])
             ->headerActions([
                 Action::make('download_template')
@@ -539,11 +559,13 @@ class DaftarLeadsTable extends TableWidget
     protected static ?string $heading = '📥 Data Pengunjung / Kontak Masuk';
     protected int | string | array $columnSpan = 'full';
 
+    protected string $view = 'shortlink::filament.table-widget';
+
     protected $listeners = ['refreshShortlinkTables' => '$refresh'];
 
     public function table(Table $table): Table
     {
-        $query = ShortlinkLead::query()->with('shortlink')->latest();
+        $query = ShortlinkLead::query()->with('shortlink');
 
         if (! (Auth::user()?->isAdmin() ?? false)) {
             $query->whereHas('shortlink', function ($q) {
@@ -553,6 +575,10 @@ class DaftarLeadsTable extends TableWidget
 
         return $table
             ->query($query)
+            ->defaultSort('created_at', 'desc')
+            ->paginationMode(PaginationMode::Default)
+            ->paginationPageOptions([10, 25, 50, 100])
+            ->defaultPaginationPageOption(10)
             ->columns([
                 TextColumn::make('shortlink.pegawai_name')
                     ->label('Link Pegawai')
@@ -571,6 +597,7 @@ class DaftarLeadsTable extends TableWidget
                 TextColumn::make('whatsapp')
                     ->label('WhatsApp')
                     ->searchable()
+                    ->sortable()
                     ->icon('heroicon-m-phone')
                     ->url(fn(?string $state) => $state ? 'https://wa.me/' . preg_replace('/[^0-9]/', '', $state) : null, true)
                     ->color('success')
@@ -579,13 +606,15 @@ class DaftarLeadsTable extends TableWidget
                 TextColumn::make('email')
                     ->label('Email')
                     ->searchable()
+                    ->sortable()
                     ->icon('heroicon-m-envelope')
                     ->default('-'),
 
                 TextColumn::make('ip_address')
                     ->label('IP / Perangkat')
                     ->color('gray')
-                    ->size('xs'),
+                    ->size('xs')
+                    ->sortable(),
 
                 TextColumn::make('created_at')
                     ->label('Waktu Akses')
