@@ -23,8 +23,7 @@ class HomeController
             // Abaikan jika terjadi concurrency race condition
         }
 
-        // Simpan hasil query data beranda dalam cache selama 5 menit
-        $cachedData = Cache::remember('website_home_data', 300, function () {
+        $fetchHomeData = function () {
             $settings        = WebsiteSetting::query()->first();
             $total_informasi = InformasiPublik::query()->count('*');
             $total_jdih      = Jdih::query()->where('status_peraturan', 'berlaku')->count('*');
@@ -50,7 +49,25 @@ class HomeController
                 'total_unduhan'   => $total_unduhan,
                 'total_kunjungan' => $total_kunjungan,
             ];
-        });
+        };
+
+        try {
+            $cachedData = Cache::remember('website_home_data', 300, $fetchHomeData);
+
+            // Self-healing: jika cache berisi incomplete class dari cache driver/versi lama, hapus dan ambil data segar
+            if (
+                ! is_array($cachedData) ||
+                ($cachedData['berita_terbaru'] ?? null) instanceof \__PHP_Incomplete_Class ||
+                ($cachedData['informasi'] ?? null) instanceof \__PHP_Incomplete_Class ||
+                ($cachedData['jdih'] ?? null) instanceof \__PHP_Incomplete_Class ||
+                ($cachedData['settings'] ?? null) instanceof \__PHP_Incomplete_Class
+            ) {
+                Cache::forget('website_home_data');
+                $cachedData = $fetchHomeData();
+            }
+        } catch (\Throwable $e) {
+            $cachedData = $fetchHomeData();
+        }
 
         return view('website::home', $cachedData);
     }

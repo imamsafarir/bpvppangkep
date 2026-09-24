@@ -27,7 +27,6 @@
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <link href="https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.min.css" rel="stylesheet">
-    <script defer src="https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/index.min.js"></script>
 
     <style>
         body {

@@ -18,7 +18,7 @@ class ProfilController
 {
     private function getCommonData()
     {
-        return Cache::remember('website_common_data', 600, function () {
+        $fetchCommonData = function () {
             $informasiRow = Informasi::query()->first();
 
             return [
@@ -33,7 +33,26 @@ class ProfilController
                 'kerjasama' => $informasiRow?->kerjasama ?? [],
                 'faq'       => $informasiRow?->faq ?? [],
             ];
-        });
+        };
+
+        try {
+            $cached = Cache::remember('website_common_data', 600, $fetchCommonData);
+
+            // Self-healing: jika cache berisi incomplete class dari cache driver/versi lama, hapus dan ambil data segar
+            if (
+                ! is_array($cached) ||
+                ($cached['profil'] ?? null) instanceof \__PHP_Incomplete_Class ||
+                ($cached['settings'] ?? null) instanceof \__PHP_Incomplete_Class ||
+                ($cached['pelayanan'] ?? null) instanceof \__PHP_Incomplete_Class
+            ) {
+                Cache::forget('website_common_data');
+                $cached = $fetchCommonData();
+            }
+
+            return $cached;
+        } catch (\Throwable $e) {
+            return $fetchCommonData();
+        }
     }
 
     public function sambutan()
