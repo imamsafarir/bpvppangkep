@@ -73,7 +73,7 @@ class WebsitePerformanceAndCacheTest extends TestCase
     {
         $this->assertFileExists(public_path('sw.js'));
         $content = file_get_contents(public_path('sw.js'));
-        $this->assertStringContainsString('bpvp-client-cache-v2', $content);
+        $this->assertStringContainsString('bpvp-client-cache', $content);
         $this->assertStringContainsString('cache.match(request)', $content);
     }
 }

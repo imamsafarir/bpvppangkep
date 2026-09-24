@@ -1,4 +1,4 @@
-const CACHE_NAME = "bpvp-client-cache-v2";
+const CACHE_NAME = "bpvp-client-cache-v3";
 const CORE_STATIC_URLS = [
     "/",
     "/manifest.json",
