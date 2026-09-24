@@ -2,30 +2,46 @@
 
 namespace App\Modules\TimSosmed\Filament\Resources\Contents\Pages;
 
+use App\Modules\TimSosmed\Filament\Pages\CalendarPage;
 use App\Modules\TimSosmed\Filament\Resources\Contents\ContentResource;
-use Filament\Actions;
+use Filament\Actions\Action;
+use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
-use Illuminate\Support\Facades\Auth; // Tambahkan import ini
+use Filament\Support\Enums\Width;
+use Illuminate\Support\Facades\Auth;
 
 class ViewContent extends ViewRecord
 {
     protected static string $resource = ContentResource::class;
 
+    protected Width | string | null $maxContentWidth = Width::Full;
+
+    public function getMaxContentWidth(): Width | string | null
+    {
+        return Width::Full;
+    }
+
     protected function getHeaderActions(): array
     {
         return [
-            // Kita gunakan Auth facade supaya Intelephense tahu ini adalah user
-            Actions\EditAction::make()
+            Action::make('kembali_kalender')
+                ->label('📅 Kembali ke Kalender')
+                ->color('gray')
+                ->url(fn() => CalendarPage::getUrl()),
+
+            EditAction::make()
                 ->visible(function ($record) {
                     $user = Auth::user();
 
-                    // Jika status belum selesai, semua yang punya akses boleh edit
+                    if (! $user) {
+                        return false;
+                    }
+
                     if ($record->status !== 'selesai') {
                         return true;
                     }
 
-                    // Jika sudah selesai, hanya super_admin yang boleh lihat tombol edit
-                    return $user && $user->hasRole('super_admin');
+                    return $user->isAdmin();
                 }),
         ];
     }

@@ -11,26 +11,29 @@ use App\Modules\Website\Models\InformasiPublik;
 use App\Modules\Website\Models\BeritaDanGaleri;
 use App\Modules\Website\Models\PelayananPublik;
 use App\Modules\Website\Models\Jdih;
+use Illuminate\Support\Facades\Cache;
 use ZipArchive;
 
 class ProfilController
 {
     private function getCommonData()
     {
-        $informasiRow = Informasi::query()->first();
+        return Cache::remember('website_common_data', 600, function () {
+            $informasiRow = Informasi::query()->first();
 
-        return [
-            'profil'    => DB::table('profils')->first(),
-            'settings'  => DB::table('website_settings')->first(),
-            'pelayanan' => PelayananPublik::query()->first(),
-            'kejuruan'  => $informasiRow?->kejuruan ?? [],
-            'fasilitas' => $informasiRow?->gedung_fasilitas ?? [],
-            'workshop'  => $informasiRow?->kelas_workshop ?? [],
-            'alumni'    => $informasiRow?->alumni ?? [],
-            'testimoni' => $informasiRow?->testimoni ?? [],
-            'kerjasama' => $informasiRow?->kerjasama ?? [],
-            'faq'       => $informasiRow?->faq ?? [],
-        ];
+            return [
+                'profil'    => DB::table('profils')->first(),
+                'settings'  => DB::table('website_settings')->first(),
+                'pelayanan' => PelayananPublik::query()->first(),
+                'kejuruan'  => $informasiRow?->kejuruan ?? [],
+                'fasilitas' => $informasiRow?->gedung_fasilitas ?? [],
+                'workshop'  => $informasiRow?->kelas_workshop ?? [],
+                'alumni'    => $informasiRow?->alumni ?? [],
+                'testimoni' => $informasiRow?->testimoni ?? [],
+                'kerjasama' => $informasiRow?->kerjasama ?? [],
+                'faq'       => $informasiRow?->faq ?? [],
+            ];
+        });
     }
 
     public function sambutan()

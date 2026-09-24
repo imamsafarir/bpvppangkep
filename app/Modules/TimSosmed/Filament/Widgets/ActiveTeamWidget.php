@@ -7,43 +7,92 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 
+/**
+ * Widget anggota tim medsos aktif — menampilkan data real anggota
+ * yang memiliki role tim sosmed beserta statistik konten.
+ */
 class ActiveTeamWidget extends BaseWidget
 {
-    // Mengatur posisi widget
     protected static ?int $sort = 4;
 
-    // Judul yang menegaskan bahwa ini adalah fitur mendatang
-    protected static ?string $heading = '⚡ Active Workspace (Status Tim - Next Feature)';
+    protected static ?string $heading = '👥 Anggota Tim Medsos';
+
+    protected static ?int $maxHeight = 400;
+
+    /**
+     * Mapping label role manusiawi.
+     */
+    protected array $roleLabels = [
+        'admin'                  => 'Administrator',
+        'super_admin'            => 'Administrator',
+        'medsos_planner'         => 'Medsos Planner',
+        'planner'                => 'Medsos Planner',
+        'medsos_editor'          => 'Medsos Editor',
+        'editor'                 => 'Medsos Editor',
+        'medsos_admin_platform'  => 'Medsos Admin Platform',
+        'admin_platform'         => 'Medsos Admin Platform',
+        'medsos_instruktur'      => 'Medsos Instruktur',
+        'instruktur'             => 'Medsos Instruktur',
+    ];
+
+    /**
+     * Mapping warna badge role.
+     */
+    protected array $roleColors = [
+        'admin'                  => 'danger',
+        'super_admin'            => 'danger',
+        'medsos_planner'         => 'warning',
+        'planner'                => 'warning',
+        'medsos_editor'          => 'success',
+        'editor'                 => 'success',
+        'medsos_admin_platform'  => 'info',
+        'admin_platform'         => 'info',
+        'medsos_instruktur'      => 'primary',
+        'instruktur'             => 'primary',
+    ];
+
+    public static function canView(): bool
+    {
+        return \Illuminate\Support\Facades\Auth::user()?->isMedsosTeam() ?? false;
+    }
 
     public function table(Table $table): Table
     {
         return $table
-            // Tetap mengambil data user sebagai placeholder
-            ->query(User::query()->latest()->limit(5))
+            ->query(
+                User::medsosTeam()->orderBy('name')
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama Anggota')
-                    // Memberikan info bahwa fitur sedang dikembangkan lewat description
-                    ->description('Sistem tracking real-time dalam tahap pengembangan.')
+                    ->description(fn($record) => '@' . $record->username)
                     ->weight('bold')
-                    ->color('gray'), // Memberikan efek "disabled" (abu-abu)
+                    ->searchable(),
+
+                Tables\Columns\TextColumn::make('role')
+                    ->label('Peran')
+                    ->badge()
+                    ->formatStateUsing(fn(string $state): string => $this->roleLabels[$state] ?? ucfirst($state))
+                    ->color(fn(string $state): string => $this->roleColors[$state] ?? 'gray'),
+
+                Tables\Columns\TextColumn::make('active_tasks')
+                    ->label('Tugas Aktif')
+                    ->getStateUsing(fn($record) => $record->activeTasks()->count())
+                    ->badge()
+                    ->color(fn($state): string => $state > 0 ? 'danger' : 'gray')
+                    ->alignCenter(),
 
                 Tables\Columns\TextColumn::make('email')
-                    ->label('Kontak Email')
+                    ->label('Email')
                     ->icon('heroicon-m-envelope')
-                    ->color('gray'),
-
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Akses Fitur')
-                    // Mengunci status dengan teks statis
-                    ->getStateUsing(fn () => '🔒 Coming Soon')
-                    ->badge()
-                    ->color('gray') // Warna netral untuk kesan belum aktif
-                    ->icon('heroicon-m-clock'),
+                    ->color('gray')
+                    ->copyable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
-            // Mematikan interaksi tabel
             ->paginated(false)
-            // Menghilangkan garis baris agar lebih minimalis sebagai placeholder
-            ->striped(false);
+            ->striped()
+            ->emptyStateHeading('Belum ada anggota tim')
+            ->emptyStateDescription('Tambahkan atau atur peran tim medsos melalui menu Kelola Pengguna.')
+            ->emptyStateIcon('heroicon-o-users');
     }
 }

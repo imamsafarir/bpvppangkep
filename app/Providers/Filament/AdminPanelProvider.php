@@ -60,7 +60,9 @@ class AdminPanelProvider extends PanelProvider
             // 🟢 MODIFIKASI FORM LOGIN (HANYA USERNAME)
             ->login(\App\Filament\Pages\Auth\CustomLogin::class)
 
-            ->homeUrl(fn(): string => auth()->user()?->role === 'shortlink' ? url('/admin/manage-shortlink') : url('/admin'))
+            ->homeUrl(function (): string {
+                return auth()->user()?->getDefaultDashboardUrl() ?? url('/admin');
+            })
 
             ->brandName('Portal BPVP Pangkep')
             ->favicon($faviconUrl)
@@ -111,13 +113,6 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            // HOOK: Komponen Chat di Akhir Body
-            ->renderHook(
-                'panels::body.end',
-                fn(): string => Auth::check()
-                    ? Blade::render("@livewire('floating-chat')")
-                    : ''
-            )
             // HOOK: PWA Manifest & Service Worker
             ->renderHook(
                 'panels::head.done',

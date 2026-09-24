@@ -38,6 +38,7 @@ use Filament\Actions\DeleteAction;
 class ManageInformasiPublik extends Page
 {
     protected string $view = 'website::filament.manage-informasi-publik';
+    protected string|\Filament\Support\Enums\Width|null $maxContentWidth = 'full';
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-document-duplicate';
     protected static ?string $title = 'Kelola Informasi Publik';
@@ -56,7 +57,7 @@ class ManageInformasiPublik extends Page
 
     public static function canAccess(): bool
     {
-        return in_array(auth()->user()?->role, ['admin', 'staff']);
+        return auth()->user()?->isAdmin() || auth()->user()?->isWebsite() || auth()->user()?->isStaff();
     }
 
     public ?array $data = [];

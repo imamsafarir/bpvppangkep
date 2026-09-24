@@ -30,6 +30,7 @@ use Filament\Schemas\Components\Grid;
 | FORM COMPONENTS
 =========================== */
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Toggle;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\FileUpload;
@@ -64,7 +65,7 @@ class ManageShortlink extends Page
      */
     public static function canAccess(): bool
     {
-        return in_array(Auth::user()?->role, ['admin', 'shortlink']);
+        return Auth::user()?->isShortlink() ?? false;
     }
 
     public function getMaxContentWidth(): Width | string | null
@@ -77,9 +78,12 @@ class ManageShortlink extends Page
     public function mount(): void
     {
         $this->form->fill([
-            'is_capture_active' => false,
-            'capture_fields'    => ['nama', 'whatsapp'],
-            'is_active'         => true,
+            'is_capture_active'  => false,
+            'capture_fields'     => ['nama', 'whatsapp'],
+            'custom_title'       => null,
+            'custom_description' => null,
+            'custom_button_text' => null,
+            'is_active'          => true,
         ]);
     }
 
@@ -122,10 +126,33 @@ class ManageShortlink extends Page
                                         'whatsapp' => '📱 Nomor WhatsApp',
                                         'email'    => '✉️ Alamat Email',
                                     ])
-                                    ->visible(fn(callable $get) => $get('is_capture_active'))
+                                    ->visible(fn(callable $get) => (bool) $get('is_capture_active'))
                                     ->columns(3)
-                                    ->required(fn(callable $get) => $get('is_capture_active')),
+                                    ->required(fn(callable $get) => (bool) $get('is_capture_active')),
                             ]),
+
+                            Grid::make(2)
+                                ->schema([
+                                    TextInput::make('custom_title')
+                                        ->label('Judul Header Kustom')
+                                        ->placeholder('Selamat Datang!')
+                                        ->maxLength(100)
+                                        ->helperText('Kosongkan untuk memakai teks bawaan: "Selamat Datang!"'),
+
+                                    TextInput::make('custom_button_text')
+                                        ->label('Teks Tombol Kustom')
+                                        ->placeholder('Lanjutkan ke Tautan')
+                                        ->maxLength(50)
+                                        ->helperText('Kosongkan untuk memakai teks bawaan: "Lanjutkan ke Tautan"'),
+
+                                    Textarea::make('custom_description')
+                                        ->label('Teks Arahan Kustom')
+                                        ->placeholder('Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan.')
+                                        ->rows(2)
+                                        ->maxLength(500)
+                                        ->columnSpanFull()
+                                        ->helperText('Kosongkan untuk memakai teks bawaan: "Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan."'),
+                                ]),
                         ]),
                 ])
                     ->livewireSubmitHandler('save')
@@ -146,19 +173,25 @@ class ManageShortlink extends Page
         $state = $this->form->getState();
 
         Shortlink::create([
-            'pegawai_name'      => $state['pegawai_name'],
-            'code'              => Shortlink::generateUniqueCode(5),
-            'destination_url'   => $state['destination_url'],
-            'is_capture_active' => $state['is_capture_active'] ?? false,
-            'capture_fields'    => !empty($state['is_capture_active']) ? ($state['capture_fields'] ?? []) : null,
-            'is_active'         => true,
-            'created_by'        => Auth::id(),
+            'pegawai_name'       => $state['pegawai_name'],
+            'code'               => Shortlink::generateUniqueCode(5),
+            'destination_url'    => $state['destination_url'],
+            'is_capture_active'  => $state['is_capture_active'] ?? false,
+            'capture_fields'     => !empty($state['is_capture_active']) ? ($state['capture_fields'] ?? []) : null,
+            'custom_title'       => !empty($state['custom_title']) ? trim($state['custom_title']) : null,
+            'custom_description' => !empty($state['custom_description']) ? trim($state['custom_description']) : null,
+            'custom_button_text' => !empty($state['custom_button_text']) ? trim($state['custom_button_text']) : null,
+            'is_active'          => true,
+            'created_by'         => Auth::id(),
         ]);
 
         $this->form->fill([
-            'is_capture_active' => false,
-            'capture_fields'    => ['nama', 'whatsapp'],
-            'is_active'         => true,
+            'is_capture_active'  => false,
+            'capture_fields'     => ['nama', 'whatsapp'],
+            'custom_title'       => null,
+            'custom_description' => null,
+            'custom_button_text' => null,
+            'is_active'          => true,
         ]);
 
         $this->dispatch('refreshShortlinkTables');
@@ -195,7 +228,7 @@ class DaftarShortlinkTable extends TableWidget
     {
         $query = Shortlink::query()->with(['user'])->withCount('leads')->latest();
 
-        if (Auth::user()?->role !== 'admin') {
+        if (! (Auth::user()?->isAdmin() ?? false)) {
             $query->where('created_by', Auth::id());
         }
 
@@ -213,7 +246,7 @@ class DaftarShortlinkTable extends TableWidget
                     ->label('Dibuat Oleh')
                     ->badge()
                     ->color('gray')
-                    ->visible(fn() => Auth::user()?->role === 'admin')
+                    ->visible(fn() => Auth::user()?->isAdmin() ?? false)
                     ->sortable(),
 
                 TextColumn::make('code')
@@ -387,14 +420,21 @@ class DaftarShortlinkTable extends TableWidget
                                 $captureFields = ['nama', 'whatsapp'];
                             }
 
+                            $customTitle       = isset($row[4]) && trim($row[4]) !== '' ? trim($row[4]) : null;
+                            $customDescription = isset($row[5]) && trim($row[5]) !== '' ? trim($row[5]) : null;
+                            $customButtonText  = isset($row[6]) && trim($row[6]) !== '' ? trim($row[6]) : null;
+
                             Shortlink::create([
-                                'pegawai_name'      => $pegawaiName,
-                                'code'              => Shortlink::generateUniqueCode(5),
-                                'destination_url'   => $destinationUrl,
-                                'is_capture_active' => $isCaptureActive,
-                                'capture_fields'    => $captureFields,
-                                'is_active'         => true,
-                                'created_by'        => $userId,
+                                'pegawai_name'        => $pegawaiName,
+                                'code'                => Shortlink::generateUniqueCode(5),
+                                'destination_url'     => $destinationUrl,
+                                'is_capture_active'   => $isCaptureActive,
+                                'capture_fields'      => $captureFields,
+                                'custom_title'        => $customTitle,
+                                'custom_description'  => $customDescription,
+                                'custom_button_text'  => $customButtonText,
+                                'is_active'           => true,
+                                'created_by'          => $userId,
                             ]);
 
                             $insertedCount++;
@@ -454,7 +494,27 @@ class DaftarShortlinkTable extends TableWidget
                                 'whatsapp' => '📱 Nomor WhatsApp',
                                 'email'    => '✉️ Alamat Email',
                             ])
-                            ->visible(fn(callable $get) => $get('is_capture_active')),
+                            ->visible(fn(callable $get) => (bool) $get('is_capture_active')),
+
+                        TextInput::make('custom_title')
+                            ->label('Judul Header Kustom')
+                            ->placeholder('Selamat Datang!')
+                            ->maxLength(100)
+                            ->helperText('Kosongkan untuk memakai teks bawaan: "Selamat Datang!"'),
+
+                        TextInput::make('custom_button_text')
+                            ->label('Teks Tombol Kustom')
+                            ->placeholder('Lanjutkan ke Tautan')
+                            ->maxLength(50)
+                            ->helperText('Kosongkan untuk memakai teks bawaan: "Lanjutkan ke Tautan"'),
+
+                        Textarea::make('custom_description')
+                            ->label('Teks Arahan Kustom')
+                            ->placeholder('Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan.')
+                            ->rows(2)
+                            ->maxLength(500)
+                            ->columnSpanFull()
+                            ->helperText('Kosongkan untuk memakai teks bawaan: "Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan."'),
 
                         Toggle::make('is_active')
                             ->label('Status Aktif')
@@ -485,7 +545,7 @@ class DaftarLeadsTable extends TableWidget
     {
         $query = ShortlinkLead::query()->with('shortlink')->latest();
 
-        if (Auth::user()?->role !== 'admin') {
+        if (! (Auth::user()?->isAdmin() ?? false)) {
             $query->whereHas('shortlink', function ($q) {
                 $q->where('created_by', Auth::id());
             });

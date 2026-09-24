@@ -10,7 +10,9 @@ class AnalitikUnduhanChart extends ChartWidget
 {
     public static function canView(): bool
     {
-        return auth()->user()?->role !== 'shortlink';
+        $user = auth()->user();
+
+        return $user ? ($user->isAdmin() || $user->isWebsite()) : false;
     }
 
     // Properti non-static sesuai standar resmi Filament

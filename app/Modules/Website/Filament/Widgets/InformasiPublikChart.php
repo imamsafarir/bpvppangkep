@@ -9,7 +9,9 @@ class InformasiPublikChart extends ChartWidget
 {
     public static function canView(): bool
     {
-        return auth()->user()?->role !== 'shortlink';
+        $user = auth()->user();
+
+        return $user ? ($user->isAdmin() || $user->isWebsite()) : false;
     }
 
     // ✅ Aman dari Fatal Error: Properti non-static sesuai dokumentasi resmi

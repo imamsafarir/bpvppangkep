@@ -103,13 +103,13 @@ class ShortlinkController
     public function exportLeadsCsv()
     {
         $user = auth()->user();
-        if (! $user || ! in_array($user->role, ['admin', 'shortlink'])) {
+        if (! $user || ! $user->isShortlink()) {
             abort(403);
         }
 
         $query = ShortlinkLead::query()->with('shortlink')->latest();
 
-        if ($user->role !== 'admin') {
+        if (! $user->isAdmin()) {
             $query->whereHas('shortlink', function ($q) use ($user) {
                 $q->where('created_by', $user->id);
             });
@@ -126,7 +126,7 @@ class ShortlinkController
     public function downloadTemplate()
     {
         $user = auth()->user();
-        if (! $user || ! in_array($user->role, ['admin', 'shortlink'])) {
+        if (! $user || ! $user->isShortlink()) {
             abort(403);
         }
 
@@ -141,6 +141,9 @@ class ShortlinkController
                 'Tautan Tujuan Asli',
                 'Aktifkan Pengambilan Data (YA/TIDAK)',
                 'Pilihan Data (Pisahkan koma: nama,whatsapp,email)',
+                'Judul Header Kustom (Opsional)',
+                'Teks Arahan Kustom (Opsional)',
+                'Teks Tombol Kustom (Opsional)',
             ], ';');
 
             fputcsv($handle, [
@@ -148,12 +151,18 @@ class ShortlinkController
                 'https://bpvppangkep.kemnaker.go.id/pelayanan',
                 'YA',
                 'nama,whatsapp',
+                'Selamat Datang Peserta Pelatihan',
+                'Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan.',
+                'Lanjutkan ke Tautan',
             ], ';');
 
             fputcsv($handle, [
                 'Siti Rahmawati, S.Kom',
                 'https://drive.google.com/drive/folders/contoh',
                 'TIDAK',
+                '',
+                '',
+                '',
                 '',
             ], ';');
 
@@ -172,13 +181,13 @@ class ShortlinkController
     public function exportShortlinksCsv()
     {
         $user = auth()->user();
-        if (! $user || ! in_array($user->role, ['admin', 'shortlink'])) {
+        if (! $user || ! $user->isShortlink()) {
             abort(403);
         }
 
         $query = Shortlink::query()->with(['user'])->withCount('leads')->latest();
 
-        if ($user->role !== 'admin') {
+        if (! $user->isAdmin()) {
             $query->where('created_by', $user->id);
         }
 
@@ -193,7 +202,7 @@ class ShortlinkController
     public function importShortlinks(Request $request)
     {
         $user = auth()->user();
-        if (! $user || ! in_array($user->role, ['admin', 'shortlink'])) {
+        if (! $user || ! $user->isShortlink()) {
             abort(403);
         }
 
@@ -252,14 +261,21 @@ class ShortlinkController
                 $captureFields = ['nama', 'whatsapp'];
             }
 
+            $customTitle       = isset($row[4]) && trim($row[4]) !== '' ? trim($row[4]) : null;
+            $customDescription = isset($row[5]) && trim($row[5]) !== '' ? trim($row[5]) : null;
+            $customButtonText  = isset($row[6]) && trim($row[6]) !== '' ? trim($row[6]) : null;
+
             Shortlink::create([
-                'pegawai_name'      => $pegawaiName,
-                'code'              => Shortlink::generateUniqueCode(5),
-                'destination_url'   => $destinationUrl,
-                'is_capture_active' => $isCaptureActive,
-                'capture_fields'    => $captureFields,
-                'is_active'         => true,
-                'created_by'        => $user->id,
+                'pegawai_name'        => $pegawaiName,
+                'code'                => Shortlink::generateUniqueCode(5),
+                'destination_url'     => $destinationUrl,
+                'is_capture_active'   => $isCaptureActive,
+                'capture_fields'      => $captureFields,
+                'custom_title'        => $customTitle,
+                'custom_description'  => $customDescription,
+                'custom_button_text'  => $customButtonText,
+                'is_active'           => true,
+                'created_by'          => $user->id,
             ]);
 
             $insertedCount++;

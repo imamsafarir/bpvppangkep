@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Formulir Pengunjung - BPVP Pangkep</title>
+    <title>{{ $shortlink->display_title }} - BPVP Pangkep</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,13 +33,13 @@
                     </path>
                 </svg>
             </div>
-            <h1 class="text-xl font-bold tracking-tight">Selamat Datang!</h1>
+            <h1 class="text-xl font-bold tracking-tight">{{ $shortlink->display_title }}</h1>
         </div>
 
         <!-- Form Body -->
         <div class="p-6 md:p-8">
             <p class="text-xs text-slate-500 mb-6 text-center leading-relaxed">
-                Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan.
+                {!! nl2br(e($shortlink->display_description)) !!}
             </p>
 
             @if (!empty($errors) && $errors->any())
@@ -117,7 +117,7 @@
                 <button type="submit" id="btn-submit"
                     class="w-full py-3.5 px-4 rounded-xl font-semibold text-sm transition-all flex items-center justify-center gap-2 group mt-2 cursor-not-allowed bg-slate-200 text-slate-400 shadow-none"
                     disabled>
-                    <span>Lanjutkan ke Tautan</span>
+                    <span>{{ $shortlink->display_button_text }}</span>
                     <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none"
                         stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

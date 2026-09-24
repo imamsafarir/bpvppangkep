@@ -5,6 +5,9 @@ namespace App\Modules\TimSosmed\Filament\Pages;
 use App\Modules\TimSosmed\Models\SocialSetting;
 use Carbon\Carbon;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Cache;
@@ -26,6 +29,12 @@ class StatistikMedsos extends Page
     protected string $view = 'timsosmed::filament.pages.statistik-medsos';
     protected ?string $heading = '📈 Insight & Statistik Media Sosial';
     protected ?string $subheading = 'Data performa akun Instagram Business berdasarkan Meta API.';
+    protected string|\Filament\Support\Enums\Width|null $maxContentWidth = 'full';
+
+    public static function canAccess(): bool
+    {
+        return \Illuminate\Support\Facades\Auth::user()?->isMedsosTeam() ?? false;
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -367,15 +376,67 @@ class StatistikMedsos extends Page
 
     /*
     |--------------------------------------------------------------------------
+    | STATUS KONEKSI META
+    |--------------------------------------------------------------------------
+    */
+
+    public function isConnected(): bool
+    {
+        return SocialSetting::query()
+            ->where('provider_name', 'facebook')
+            ->whereNotNull('access_token')
+            ->exists();
+    }
+
+    public function getConnectedSetting(): ?SocialSetting
+    {
+        return SocialSetting::query()->where('provider_name', 'facebook')->first();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | MOUNT: HANYA MENYIAPKAN FILTER, TANPA REQUEST META
     |--------------------------------------------------------------------------
     */
 
     public function mount(): void
     {
+        if (session()->has('success')) {
+            Notification::make()
+                ->title('Berhasil Terhubung')
+                ->body(session('success'))
+                ->success()
+                ->send();
+        }
+
+        if (session()->has('error')) {
+            Notification::make()
+                ->title('Gagal Terhubung')
+                ->body(session('error'))
+                ->danger()
+                ->send();
+        }
+
         $this->resetAllMetrics();
         $this->applyQuickRange('yesterday');
         $this->filtersDirty = false;
+
+        // Muat profil dari cache jika tersedia
+        if ($this->isConnected()) {
+            $setting = $this->getConnectedSetting();
+            if ($setting?->ig_user_id) {
+                $cached = Cache::get($this->profileCacheKey((string) $setting->ig_user_id));
+                if (is_array($cached)) {
+                    $this->igData = $cached;
+                }
+            }
+
+            // Jika baru saja login dari Facebook OAuth, otomatis tarik data analitik ke layar
+            if (session('auto_load_medsos') || request()->has('auto_load')) {
+                $this->loadInstagramData();
+                session()->forget('auto_load_medsos');
+            }
+        }
     }
 
     /*
@@ -387,10 +448,36 @@ class StatistikMedsos extends Page
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('disconnect_facebook')
+                ->label('Putuskan Koneksi')
+                ->icon('heroicon-o-link-slash')
+                ->color('danger')
+                ->requiresConfirmation()
+                ->modalHeading('Putuskan Koneksi Instagram @bpvppangkep?')
+                ->modalDescription('Token akses akan dihapus. Anda dapat menghubungkannya kembali kapan saja.')
+                ->visible(fn(): bool => $this->isConnected())
+                ->action(function (): void {
+                    $setting = $this->getConnectedSetting();
+                    if ($setting?->ig_user_id) {
+                        Cache::forget($this->profileCacheKey((string) $setting->ig_user_id));
+                    }
+                    SocialSetting::where('provider_name', 'facebook')->delete();
+                    $this->resetAllMetrics();
+                    $this->igData = [];
+                    $this->hasLoadedData = false;
+
+                    Notification::make()
+                        ->title('Koneksi Meta Berhasil Diputuskan')
+                        ->body('Integrasi akun Instagram telah direset.')
+                        ->info()
+                        ->send();
+                }),
+
             Action::make('load_instagram_data')
                 ->label(fn(): string => $this->hasLoadedData ? 'Ambil Ulang Data' : 'Ambil Data')
                 ->icon('heroicon-o-cloud-arrow-down')
                 ->color('primary')
+                ->visible(fn(): bool => $this->isConnected())
                 ->action(fn() => $this->loadInstagramData()),
 
             Action::make('force_refresh_instagram')
@@ -398,21 +485,9 @@ class StatistikMedsos extends Page
                 ->icon('heroicon-o-arrow-path')
                 ->color('gray')
                 ->requiresConfirmation()
-                ->modalDescription('Cache untuk periode aktif akan dilewati dan data diminta ulang dari Meta API.')
+                ->modalDescription('Cache untuk periode aktif akan dilewati dan data diminta ulang langsung dari Meta API.')
                 ->action(fn() => $this->loadInstagramData(force: true))
-                ->visible(fn(): bool => $this->hasLoadedData),
-
-            Action::make('login_facebook')
-                ->label('Hubungkan ke Facebook Business')
-                ->icon('heroicon-o-link')
-                ->color('primary')
-                ->url(route('facebook.login'))
-                ->hidden(
-                    fn(): bool => SocialSetting::query()
-                        ->where('provider_name', 'facebook')
-                        ->whereNotNull('access_token')
-                        ->exists()
-                ),
+                ->visible(fn(): bool => $this->isConnected() && $this->hasLoadedData),
         ];
     }
 

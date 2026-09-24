@@ -23,6 +23,11 @@ class MyTasksTable extends BaseWidget
 
     protected static ?string $pollingInterval = '15s';
 
+    public static function canView(): bool
+    {
+        return Auth::user()?->isMedsosTeam() ?? false;
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -45,41 +50,31 @@ class MyTasksTable extends BaseWidget
                     return $query->whereRaw('1 = 0');
                 }
 
-                // Super Admin melihat semua tugas yang belum selesai.
-                if ($user->hasRole('super_admin')) {
+                // Super Admin / Administrator melihat semua tugas yang belum selesai.
+                if ($user->isAdmin()) {
                     return $query->where('status', '!=', 'selesai');
                 }
 
                 return $query
                     ->where('status', '!=', 'selesai')
                     ->where(function (Builder $taskQuery) use ($user) {
-
-                        // Semua role internal bisa membuat bahan/final.
-                        // Jadi tugas draft/revisi_planner milik sendiri harus muncul.
-                        $taskQuery->where(function (Builder $ownTask) use ($user) {
-                            $ownTask
-                                ->whereIn('status', ['draft', 'revisi_planner'])
-                                ->where(function (Builder $owner) use ($user) {
-                                    $owner
-                                        ->where('pegawai_id', $user->id)
-                                        ->orWhere('instruktur_id', $user->id)
-                                        ->orWhere('planner_id', $user->id);
-                                });
-                        });
-
                         // Planner melihat semua konten yang masih di tahap perencanaan.
-                        if ($user->hasRole('planner')) {
-                            $taskQuery->orWhereIn('status', ['draft', 'revisi_planner']);
+                        if ($user->isMedsosPlanner()) {
+                            $taskQuery->orWhereIn('status', ['draft', 'revisi_planner'])
+                                ->orWhere('planner_id', $user->id)
+                                ->orWhere('pegawai_id', $user->id);
                         }
 
                         // Editor melihat semua konten yang menunggu editing / revisi editor.
-                        if ($user->hasRole('editor')) {
-                            $taskQuery->orWhereIn('status', ['menunggu_editor', 'revisi_editor']);
+                        if ($user->isMedsosEditor()) {
+                            $taskQuery->orWhereIn('status', ['menunggu_editor', 'revisi_editor'])
+                                ->orWhere('editor_id', $user->id);
                         }
 
                         // Admin Platform melihat semua konten siap publish.
-                        if ($user->hasRole('admin_platform')) {
-                            $taskQuery->orWhere('status', 'siap_publish');
+                        if ($user->isMedsosAdminPlatform()) {
+                            $taskQuery->orWhere('status', 'siap_publish')
+                                ->orWhere('admin_id', $user->id);
                         }
                     });
             })

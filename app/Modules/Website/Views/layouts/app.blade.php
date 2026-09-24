@@ -12,15 +12,22 @@
     <link rel="icon" type="image/png"
         href="{{ $settings?->favicon_path ? asset('storage/' . $settings->favicon_path) : asset('default-favicon.png') }}">
 
-    {{-- Asset Global --}}
+    {{-- Resource Hints: Preconnect ke CDN utama untuk handshake instan --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+
+    {{-- Asset Global: Vite Compiled Production CSS & JS (Super Cepat, Tanpa JIT Runtime di Browser Pengunjung) --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap"
         rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <link href="https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/open-dyslexic-regular.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/index.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/index.min.js"></script>
 
     <style>
         body {
@@ -165,16 +172,6 @@
         html.ax-tritanopia {
             filter: url('#ax-filter-tritanopia') !important;
         }
-
-        /* Load font disleksia premium internasional */
-        @import url('https://cdn.jsdelivr.net/npm/opendyslexic@1.0.3/popup.min.css');
-
-        html.ax-dyslexia-font,
-        html.ax-dyslexia-font * {
-            font-family: 'OpenDyslexic', sans-serif !important;
-            letter-spacing: 0.06em !important;
-            word-spacing: 0.12em !important;
-        }
     </style>
 
     {{-- Wadah CSS Tambahan jika suatu halaman butuh style unik --}}
@@ -201,6 +198,15 @@
 
     {{-- Wadah Script Tambahan jika suatu halaman butuh JS unik --}}
     @stack('scripts')
+
+    {{-- Registrasi Service Worker untuk Caching Instan di Browser Masing-masing Pengunjung --}}
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('/sw.js').catch(function() {});
+            });
+        }
+    </script>
 </body>
 
 </html>

@@ -17,6 +17,11 @@ class ContentChart extends ChartWidget
 
     protected static ?int $sort = 3;
 
+    public static function canView(): bool
+    {
+        return \Illuminate\Support\Facades\Auth::user()?->isMedsosTeam() ?? false;
+    }
+
     /**
      * Properti publik untuk menangkap parameter dari Blade
      */

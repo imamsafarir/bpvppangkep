@@ -29,19 +29,7 @@ class ContentResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Tim Media Sosial';
 
-    protected static ?int $navigationSort = 1;
-
-    protected static function internalRoles(): array
-    {
-        return [
-            'super_admin',
-            'admin_platform',
-            'planner',
-            'editor',
-            'instruktur',
-            'pegawai',
-        ];
-    }
+    protected static ?int $navigationSort = 2;
 
     protected static function canAccessInternal(): bool
     {
@@ -50,11 +38,7 @@ class ContentResource extends Resource
             return false;
         }
 
-        if ($user->role === 'admin' || $user->hasRole('super_admin')) {
-            return true;
-        }
-
-        return $user->hasAnyRole(static::internalRoles());
+        return $user->isAdmin() || $user->isMedsosTeam() || $user->isStaff();
     }
 
     public static function canAccess(): bool
@@ -69,7 +53,8 @@ class ContentResource extends Resource
 
     public static function canCreate(): bool
     {
-        return static::canAccessInternal();
+        $user = Auth::user();
+        return $user ? ($user->isAdmin() || $user->isMedsosTeam() || $user->isStaff()) : false;
     }
 
     public static function canView(Model $record): bool
@@ -84,7 +69,7 @@ class ContentResource extends Resource
         }
 
         $user = Auth::user();
-        if ($user?->role === 'admin' || $user?->hasRole('super_admin')) {
+        if ($user?->isAdmin()) {
             return true;
         }
 
@@ -102,17 +87,16 @@ class ContentResource extends Resource
         }
 
         $user = Auth::user();
-        if ($user?->role === 'admin' || $user?->hasRole('super_admin')) {
+        if ($user?->isAdmin()) {
             return true;
         }
 
-        return $user?->hasRole('planner') && $record->status !== 'selesai';
+        return ($user?->isMedsosPlanner() ?? false) && $record->status !== 'selesai';
     }
 
     public static function canDeleteAny(): bool
     {
-        $user = Auth::user();
-        return Auth::check() && ($user?->role === 'admin' || $user?->hasRole('super_admin'));
+        return Auth::user()?->isAdmin() ?? false;
     }
 
     public static function infolist(Schema $schema): Schema
@@ -130,7 +114,7 @@ class ContentResource extends Resource
         return ContentsTable::configure($table);
     }
 
-    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
 
@@ -139,19 +123,15 @@ class ContentResource extends Resource
         }
 
         $user = Auth::user();
-        if ($user->role === 'admin' || $user->hasRole('super_admin')) {
+        if ($user->isAdmin() || $user->isMedsosTeam()) {
             return $query;
         }
 
-        if ($user->hasRole('pegawai')) {
-            return $query->where('pegawai_id', Auth::id());
-        }
-
-        if ($user->hasRole('instruktur')) {
-            return $query->where('instruktur_id', Auth::id());
-        }
-
-        return $query;
+        return $query->where(function (Builder $q) use ($user) {
+            $q->where('pegawai_id', $user->id)
+                ->orWhere('instruktur_id', $user->id)
+                ->orWhere('planner_id', $user->id);
+        });
     }
 
     public static function getPages(): array

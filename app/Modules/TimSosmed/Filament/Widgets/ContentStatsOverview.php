@@ -10,6 +10,11 @@ class ContentStatsOverview extends BaseWidget
 {
     protected ?string $pollingInterval = '30s';
 
+    public static function canView(): bool
+    {
+        return \Illuminate\Support\Facades\Auth::user()?->isMedsosTeam() ?? false;
+    }
+
     protected int|array|null $columns = [
         'default' => 2, // 2 kolom di HP
         'md' => 2,
@@ -26,8 +31,8 @@ class ContentStatsOverview extends BaseWidget
 
         // Hitung total untuk status 'Review' (gabungan beberapa status)
         $reviewCount = ($counts['revisi_editor'] ?? 0) +
-                       ($counts['revisi_planner'] ?? 0) +
-                       ($counts['siap_publish'] ?? 0);
+            ($counts['revisi_planner'] ?? 0) +
+            ($counts['siap_publish'] ?? 0);
 
         return [
             Stat::make('Butuh Aset', $counts['draft'] ?? 0)

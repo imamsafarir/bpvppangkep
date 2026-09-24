@@ -16,6 +16,22 @@ class AppServiceProvider extends ServiceProvider
             \Filament\Auth\Http\Responses\Contracts\LoginResponse::class,
             \App\Http\Responses\LoginResponse::class
         );
+
+        if (! class_exists('\Dom\HTMLDocument')) {
+            $this->app->singleton(\Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface::class, function () {
+                return new class implements \Symfony\Component\HtmlSanitizer\HtmlSanitizerInterface {
+                    public function sanitize(string $html): string
+                    {
+                        return $html;
+                    }
+
+                    public function sanitizeFor(string $element, string $html): string
+                    {
+                        return $html;
+                    }
+                };
+            });
+        }
     }
 
     /**

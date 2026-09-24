@@ -8,8 +8,10 @@ use Filament\Infolists\Components\SpatieMediaLibraryImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Livewire;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use App\Modules\TimSosmed\Livewire\ContentComments;
 use Illuminate\Support\Str;
 use ZipArchive;
 
@@ -28,7 +30,7 @@ class ContentInfolist
                             TextEntry::make('nama_kegiatan')->weight('bold')->size('lg'),
                             TextEntry::make('status')
                                 ->badge()
-                                ->color(fn (string $state): string => match ($state) {
+                                ->color(fn(string $state): string => match ($state) {
                                     'draft' => 'gray',
                                     'menunggu_editor' => 'warning',
                                     'revisi_editor', 'revisi_planner' => 'danger',
@@ -60,15 +62,15 @@ class ContentInfolist
                             ->label('Link Folder Bahan Mentah')
                             ->icon('heroicon-m-link')
                             ->color('warning')
-                            ->url(fn ($record) => $record->link_media_mentah)
+                            ->url(fn($record) => $record->link_media_mentah)
                             ->openUrlInNewTab()
                             ->placeholder('Belum ada link bahan mentah.')
-                            ->visible(fn ($record) => filled($record->link_media_mentah)),
+                            ->visible(fn($record) => filled($record->link_media_mentah)),
 
                         TextEntry::make('link_referensi')
                             ->label('Link Referensi Ide')
                             ->icon('heroicon-m-arrow-top-right-on-square')
-                            ->url(fn ($record) => $record->link_referensi)
+                            ->url(fn($record) => $record->link_referensi)
                             ->openUrlInNewTab()
                             ->placeholder('Tidak ada link referensi.'),
 
@@ -77,8 +79,8 @@ class ContentInfolist
                                 ->label('Download Bahan Mentah (.zip)')
                                 ->icon('heroicon-o-arrow-down-tray')
                                 ->color('warning')
-                                ->visible(fn ($record) => $record->hasMedia('mentah'))
-                                ->action(fn ($record) => self::handleZipDownload($record, 'mentah')),
+                                ->visible(fn($record) => $record->hasMedia('mentah'))
+                                ->action(fn($record) => self::handleZipDownload($record, 'mentah')),
                         ]),
 
                         SpatieMediaLibraryImageEntry::make('media_mentah')
@@ -86,7 +88,7 @@ class ContentInfolist
                             ->collection('mentah')
                             ->circular()
                             ->stacked()
-                            ->visible(fn ($record) => $record->hasMedia('mentah')),
+                            ->visible(fn($record) => $record->hasMedia('mentah')),
                     ])->columns(2),
 
                 // 3. SEKSI HASIL PRODUKSI (EDITOR & PUBLISH)
@@ -110,17 +112,17 @@ class ContentInfolist
                             ->label('Link Video Hasil Final')
                             ->icon('heroicon-m-video-camera')
                             ->color('success')
-                            ->url(fn ($record) => $record->link_hasil_edit)
+                            ->url(fn($record) => $record->link_hasil_edit)
                             ->openUrlInNewTab()
                             ->placeholder('Hasil edit belum tersedia.')
-                            ->visible(fn ($record) => filled($record->link_hasil_edit)),
+                            ->visible(fn($record) => filled($record->link_hasil_edit)),
 
                         // --- LINK LIVE POSTINGAN ---
                         TextEntry::make('link_postingan')
                             ->label('Link Konten (Sudah Live)')
                             ->icon('heroicon-m-globe-alt')
                             ->color('info')
-                            ->url(fn ($record) => $record->link_postingan)
+                            ->url(fn($record) => $record->link_postingan)
                             ->openUrlInNewTab()
                             ->placeholder('Konten belum dipublish.'),
 
@@ -129,8 +131,8 @@ class ContentInfolist
                                 ->label('Download Hasil Final (.zip)')
                                 ->icon('heroicon-o-check-badge')
                                 ->color('success')
-                                ->visible(fn ($record) => $record->hasMedia('hasil_edit'))
-                                ->action(fn ($record) => self::handleZipDownload($record, 'hasil_edit')),
+                                ->visible(fn($record) => $record->hasMedia('hasil_edit'))
+                                ->action(fn($record) => self::handleZipDownload($record, 'hasil_edit')),
                         ]),
 
                         SpatieMediaLibraryImageEntry::make('hasil_edit')
@@ -138,7 +140,7 @@ class ContentInfolist
                             ->collection('hasil_edit')
                             ->circular()
                             ->stacked()
-                            ->visible(fn ($record) => $record->hasMedia('hasil_edit')),
+                            ->visible(fn($record) => $record->hasMedia('hasil_edit')),
                     ])->columns(2),
 
                 // 4. LOG REVISI
@@ -154,10 +156,21 @@ class ContentInfolist
                                 TextEntry::make('target_revisi')
                                     ->label('Target')
                                     ->badge()
-                                    ->color(fn ($state) => $state === 'planner' ? 'warning' : 'danger'),
+                                    ->color(fn($state) => $state === 'planner' ? 'warning' : 'danger'),
                                 TextEntry::make('catatan')->label('Pesan Revisi'),
                             ])->columns(3),
                     ])->collapsible()->compact(),
+
+                // 5. DISKUSI & KOMENTAR TIM
+                Section::make('💬 Diskusi & Komentar Tim')
+                    ->description('Ruang obrolan internal tim medsos terkait konten ini.')
+                    ->icon('heroicon-o-chat-bubble-left-right')
+                    ->schema([
+                        Livewire::make(ContentComments::class, fn($record) => [
+                            'contentId' => $record?->id,
+                        ])
+                            ->key(fn($record) => 'infolist-comments-' . ($record?->id ?? 'new')),
+                    ])->collapsible(),
             ]);
     }
 

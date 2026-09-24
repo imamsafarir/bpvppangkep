@@ -13,16 +13,26 @@ class Dashboard extends BaseDashboard
      */
     public static function canAccess(): bool
     {
-        return Auth::user()?->role === 'admin';
+        $user = Auth::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return $user->isAdmin();
     }
 
     public function mountCanAuthorizeAccess(): void
     {
-        if (Auth::user()?->role === 'shortlink') {
-            redirect()->to(ManageShortlink::getUrl());
-            return;
+        $user = Auth::user();
+
+        if (! $user) {
+            abort(403);
         }
 
-        abort_unless(static::canAccess(), 403);
+        if (! static::canAccess()) {
+            $this->redirect($user->getDefaultDashboardUrl());
+            return;
+        }
     }
 }

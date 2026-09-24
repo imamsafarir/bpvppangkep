@@ -19,6 +19,9 @@ class Shortlink extends Model
         'clicks_count',
         'is_capture_active',
         'capture_fields',
+        'custom_title',
+        'custom_description',
+        'custom_button_text',
         'is_active',
         'created_by',
     ];
@@ -74,5 +77,35 @@ class Shortlink extends Model
     public function getShortUrlAttribute(): string
     {
         return url('/s/' . $this->code);
+    }
+
+    /**
+     * Get the display title with fallback default
+     */
+    public function getDisplayTitleAttribute(): string
+    {
+        return !empty(trim($this->custom_title ?? ''))
+            ? $this->custom_title
+            : 'Selamat Datang!';
+    }
+
+    /**
+     * Get the display description with fallback default
+     */
+    public function getDisplayDescriptionAttribute(): string
+    {
+        return !empty(trim($this->custom_description ?? ''))
+            ? $this->custom_description
+            : 'Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan.';
+    }
+
+    /**
+     * Get the display button text with fallback default
+     */
+    public function getDisplayButtonTextAttribute(): string
+    {
+        return !empty(trim($this->custom_button_text ?? ''))
+            ? $this->custom_button_text
+            : 'Lanjutkan ke Tautan';
     }
 }

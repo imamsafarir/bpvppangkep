@@ -2,75 +2,87 @@
 
 namespace App\Modules\TimSosmed\Filament\Resources\Contents\Pages;
 
+use App\Modules\TimSosmed\Filament\Pages\CalendarPage;
 use App\Modules\TimSosmed\Filament\Resources\Contents\ContentResource;
-use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
-// PERBAIKAN: Gunakan Action universal dari Filament\Actions
-use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Enums\Width;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Js;
 
 class EditContent extends EditRecord
 {
     protected static string $resource = ContentResource::class;
 
+    protected Width | string | null $maxContentWidth = Width::Full;
+
+    public function getMaxContentWidth(): Width | string | null
+    {
+        return Width::Full;
+    }
+
+    protected function getRedirectUrl(): ?string
+    {
+        return CalendarPage::getUrl();
+    }
+
+    protected function afterSave(): void
+    {
+        $this->js("
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({ type: 'content-saved' }, '*');
+            }
+        ");
+    }
+
     protected function getHeaderActions(): array
     {
         return [
             DeleteAction::make()
-                ->hidden(fn() => ! auth()->user()->hasRole('super_admin')),
+                ->hidden(fn() => ! (Auth::user()?->isAdmin() ?? false))
+                ->successRedirectUrl(CalendarPage::getUrl()),
         ];
     }
 
-    /**
-     * Logika otomatis setelah tombol 'Save Changes' diklik
-     */
-    protected function afterSave(): void
+    protected function getFormActions(): array
     {
-        $record = $this->record;
-        $targetUrl = ContentResource::getUrl('edit', ['record' => $record]);
-
-        // 1. REVISI UNTUK EDITOR (Hanya kirim ke Editor)
-        if ($record->status === 'revisi_editor') {
-            $editors = User::role('editor')->get();
-            Notification::make()
-                ->title('🛠️ Ada Revisi Editor!')
-                ->body("Admin meminta perbaikan aset untuk '{$record->nama_kegiatan}'.")
-                ->danger()
-                ->actions([
-                    Action::make('view')
-                        ->label('Buka Konten')
-                        ->url($targetUrl)
-                        ->button()
-                        ->markAsRead(),
-                ])
-                ->sendToDatabase($editors);
+        if (! (Auth::user()?->isAdmin() ?? false)) {
+            return [];
         }
 
-        // 2. REVISI UNTUK PLANNER (Hanya kirim ke Planner)
-        if ($record->status === 'revisi_planner') {
-            if ($record->planner) {
-                Notification::make()
-                    ->title('📝 Ada Revisi Planner!')
-                    ->body("Konten '{$record->nama_kegiatan}' perlu perbaikan brief/caption.")
-                    ->danger()
-                    ->actions([
-                        Action::make('view')
-                            ->label('Buka Konten')
-                            ->url($targetUrl)
-                            ->button()
-                            ->markAsRead(),
-                    ])
-                    ->sendToDatabase($record->planner);
-            }
-        }
+        return parent::getFormActions();
+    }
+
+    protected function getCancelFormAction(): Action
+    {
+        $url = CalendarPage::getUrl();
+
+        return Action::make('cancel')
+            ->label(__('filament-panels::resources/pages/edit-record.form.actions.cancel.label'))
+            ->alpineClickHandler("
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'close-content-popup' }, '*');
+                } else {
+                    window.location.href = " . Js::from($url) . ";
+                }
+            ")
+            ->color('gray');
     }
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        if (auth()->user()->hasRole(['planner', 'super_admin'])) {
-            $data['planner_id'] = auth()->id();
+        $user = Auth::user();
+        if ($user) {
+            if ($user->isMedsosPlanner() && empty($data['planner_id'])) {
+                $data['planner_id'] = $user->id;
+            }
+            if ($user->isMedsosEditor() && empty($data['editor_id'])) {
+                $data['editor_id'] = $user->id;
+            }
+            if ($user->isMedsosAdminPlatform() && empty($data['admin_id'])) {
+                $data['admin_id'] = $user->id;
+            }
         }
 
         return $data;

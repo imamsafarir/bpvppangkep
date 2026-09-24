@@ -12,8 +12,14 @@ class LoginResponse implements Responsable
 {
     public function toResponse($request): RedirectResponse | Redirector
     {
-        if (Auth::user()?->role === 'shortlink') {
-            return redirect()->to(url('/admin/manage-shortlink'));
+        $user = Auth::user();
+
+        if ($user) {
+            if ($user->isAdmin()) {
+                return redirect()->intended(Filament::getUrl());
+            }
+
+            return redirect()->to($user->getDefaultDashboardUrl());
         }
 
         return redirect()->intended(Filament::getUrl());

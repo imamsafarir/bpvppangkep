@@ -29,9 +29,14 @@ class PlatformResource extends Resource
 
     protected static ?int $navigationSort = 5;
 
+    public static function canAccess(): bool
+    {
+        return Auth::user()?->isAdmin() || (Auth::user()?->isMedsosAdminPlatform() ?? false);
+    }
+
     public static function canViewAny(): bool
     {
-        return Auth::check() && (Auth::user()?->role === 'admin' || Auth::user()?->hasRole('super_admin'));
+        return static::canAccess();
     }
 
     public static function form(Schema $schema): Schema

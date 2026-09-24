@@ -27,6 +27,7 @@ use BackedEnum;
 class ManageProfil extends Page
 {
     protected string $view = 'website::filament.manage-profil';
+    protected string|\Filament\Support\Enums\Width|null $maxContentWidth = 'full';
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $title = 'Profil Balai';
@@ -45,7 +46,7 @@ class ManageProfil extends Page
 
     public static function canAccess(): bool
     {
-        return in_array(auth()->user()?->role, ['admin', 'staff']);
+        return auth()->user()?->isAdmin() || auth()->user()?->isWebsite() || auth()->user()?->isStaff();
     }
 
     /**

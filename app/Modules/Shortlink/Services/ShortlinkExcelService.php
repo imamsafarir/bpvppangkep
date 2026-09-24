@@ -288,6 +288,9 @@ class ShortlinkExcelService
             'Total Data Masuk',
             'Form Pengambilan Data',
             'Field Diminta',
+            'Judul Header Kustom',
+            'Teks Arahan Kustom',
+            'Teks Tombol Kustom',
             'Dibuat Oleh',
             'Tanggal Dibuat',
         ];
@@ -309,6 +312,9 @@ class ShortlinkExcelService
                 $item->leads_count,
                 $item->is_capture_active ? 'Aktif' : 'Nonaktif',
                 $fields,
+                $item->custom_title ?: '-',
+                $item->custom_description ?: '-',
+                $item->custom_button_text ?: '-',
                 $item->user?->name ?? '-',
                 $item->created_at ? $item->created_at->format('d-m-Y H:i:s') : '-',
             ];
@@ -346,6 +352,7 @@ class ShortlinkExcelService
             'Kode Shortlink',
             'Barcode / QR Code',
             'Tautan Shortlink',
+            'Judul Formulir',
             'Nama Pengunjung',
             'Nomor WhatsApp',
             'Email',
@@ -367,6 +374,7 @@ class ShortlinkExcelService
                 $shortlink?->code ?? '-',
                 '', // Kolom Barcode / QR Code
                 $shortUrl,
+                $shortlink?->display_title ?? '-',
                 $lead->nama ?? '-',
                 $lead->whatsapp ? $lead->whatsapp : '-',
                 $lead->email ?? '-',

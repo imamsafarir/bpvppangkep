@@ -4,7 +4,6 @@ namespace App\Modules\TimSosmed;
 
 use Illuminate\Support\ServiceProvider;
 use Livewire\Livewire;
-use App\Modules\TimSosmed\Livewire\FloatingChat;
 
 class TimSosmedServiceProvider extends ServiceProvider
 {
@@ -24,7 +23,7 @@ class TimSosmedServiceProvider extends ServiceProvider
         // Daftarkan migrasi internal modul
         $this->loadMigrationsFrom(__DIR__ . '/Database/Migrations');
 
-        // Daftarkan komponen Livewire FloatingChat
-        Livewire::component('floating-chat', FloatingChat::class);
+        // Daftarkan komponen Livewire Diskusi Konten
+        Livewire::component('content-comments', \App\Modules\TimSosmed\Livewire\ContentComments::class);
     }
 }

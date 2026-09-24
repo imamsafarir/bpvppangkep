@@ -59,4 +59,9 @@ class Content extends Model implements HasMedia
     {
         return $this->hasMany(Revision::class);
     }
+
+    public function comments(): HasMany
+    {
+        return $this->hasMany(Comment::class)->latest();
+    }
 }

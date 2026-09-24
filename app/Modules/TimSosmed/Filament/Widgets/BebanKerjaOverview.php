@@ -11,6 +11,11 @@ class BebanKerjaOverview extends BaseWidget
 {
     protected ?string $pollingInterval = '5s';
 
+    public static function canView(): bool
+    {
+        return \Illuminate\Support\Facades\Auth::user()?->isMedsosTeam() ?? false;
+    }
+
     protected function getStats(): array
     {
         // 1. Hitung beban Planner (Pisahkan Bahan & Final)

@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Storage;
 class ManageWebsiteSettings extends Page
 {
     protected string $view = 'website::filament.manage-website-settings';
+    protected string|\Filament\Support\Enums\Width|null $maxContentWidth = 'full';
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-cog-6-tooth';
     protected static ?string $title = 'Pengaturan Website';
@@ -48,7 +49,9 @@ class ManageWebsiteSettings extends Page
 
     public static function canAccess(): bool
     {
-        return auth()->user()?->role === 'admin';
+        $user = auth()->user();
+
+        return $user ? ($user->isAdmin() || $user->isWebsite()) : false;
     }
 
     public ?array $data = [];

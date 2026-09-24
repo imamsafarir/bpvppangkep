@@ -9,7 +9,9 @@ class BeritaDanGaleriChart extends ChartWidget
 {
     public static function canView(): bool
     {
-        return auth()->user()?->role !== 'shortlink';
+        $user = auth()->user();
+
+        return $user ? ($user->isAdmin() || $user->isWebsite()) : false;
     }
 
     // ✅ SUDAH DIPERBAIKI: Menghapus keyword 'static' agar sesuai dengan dokumentasi resmi Filament

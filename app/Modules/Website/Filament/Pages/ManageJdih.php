@@ -45,6 +45,7 @@ use Filament\Actions\DeleteAction;
 class ManageJdih extends Page
 {
     protected string $view = 'website::filament.manage-jdih';
+    protected string|\Filament\Support\Enums\Width|null $maxContentWidth = 'full';
 
     protected static string | BackedEnum | null $navigationIcon = 'heroicon-o-scale';
     protected static ?string $title = 'Kelola JDIH';
@@ -63,7 +64,7 @@ class ManageJdih extends Page
 
     public static function canAccess(): bool
     {
-        return in_array(auth()->user()?->role, ['admin', 'staff']);
+        return auth()->user()?->isAdmin() || auth()->user()?->isWebsite() || auth()->user()?->isStaff();
     }
 
     public ?array $data = [];
