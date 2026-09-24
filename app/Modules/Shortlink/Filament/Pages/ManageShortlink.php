@@ -288,7 +288,7 @@ class DaftarShortlinkTable extends TableWidget
                     ->label('Data Masuk')
                     ->badge()
                     ->color('info')
-                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy('leads_count', $direction))
+                    ->sortable(query: fn(Builder $query, string $direction): Builder => $query->orderBy('leads_count', $direction))
                     ->alignCenter(),
 
                 IconColumn::make('is_capture_active')

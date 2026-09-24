@@ -18,7 +18,7 @@ class ShortlinkTableSortingAndLoadingTest extends TestCase
 
         $this->assertStringContainsString('wire:loading', $viewContent);
         $this->assertStringContainsString('Memuat Data...', $viewContent);
-        $this->assertStringContainsString('animate-spin', $viewContent);
+        $this->assertStringContainsString('bpvp-table-spin', $viewContent);
     }
 
     public function test_manage_shortlink_page_has_form_submit_loading_state()
