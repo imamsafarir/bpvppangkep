@@ -23,8 +23,8 @@ class ActiveTeamWidget extends BaseWidget
      * Mapping label role manusiawi.
      */
     protected array $roleLabels = [
+        'super_admin'            => 'Super Admin',
         'admin'                  => 'Administrator',
-        'super_admin'            => 'Administrator',
         'medsos_planner'         => 'Medsos Planner',
         'planner'                => 'Medsos Planner',
         'medsos_editor'          => 'Medsos Editor',

@@ -72,7 +72,8 @@ class User extends Authenticatable implements FilamentUser
         $badges = [];
 
         $roleDefinitions = [
-            ['keys' => ['super_admin', 'admin'], 'label' => 'Administrator', 'icon' => '👑', 'color' => 'danger'],
+            ['keys' => ['super_admin'], 'label' => 'Super Admin', 'icon' => '👑', 'color' => 'danger'],
+            ['keys' => ['admin'], 'label' => 'Administrator', 'icon' => '🛡️', 'color' => 'danger'],
             ['keys' => ['medsos_planner', 'planner'], 'label' => 'Planner', 'icon' => '📋', 'color' => 'warning'],
             ['keys' => ['medsos_editor', 'editor'], 'label' => 'Editor', 'icon' => '🎨', 'color' => 'success'],
             ['keys' => ['medsos_admin_platform', 'admin_platform'], 'label' => 'Admin Platform', 'icon' => '🚀', 'color' => 'info'],

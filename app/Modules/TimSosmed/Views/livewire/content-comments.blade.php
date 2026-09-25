@@ -384,7 +384,8 @@
                 $isMe = auth()->id() === $comment->user_id;
                 $user = $comment->user;
                 $roleLabel = match (true) {
-                    $user?->isAdmin() => '👑 Admin',
+                    $user?->isSuperAdmin() => '👑 Super Admin',
+                    $user?->isAdmin() => '🛡️ Admin',
                     $user?->isMedsosPlanner() => '📋 Planner',
                     $user?->isMedsosEditor() => '🎨 Editor',
                     $user?->isMedsosAdminPlatform() => '🚀 Admin Platform',
@@ -393,6 +394,7 @@
                     default => '👥 Pegawai',
                 };
                 $roleClass = match (true) {
+                    $user?->isSuperAdmin() => 'ts-role-admin',
                     $user?->isAdmin() => 'ts-role-admin',
                     $user?->isMedsosPlanner() => 'ts-role-planner',
                     $user?->isMedsosEditor() => 'ts-role-editor',

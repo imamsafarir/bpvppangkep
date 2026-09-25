@@ -109,17 +109,25 @@ class ManageUser extends Page
 
                                     Select::make('roles')
                                         ->label('Peran / Hak Akses Pengguna (Bisa Lebih Dari 1)')
-                                        ->options([
-                                            'admin'                  => '👑 Administrator System',
-                                            'staff'                  => '💼 Staf Balai',
-                                            'shortlink'              => '🔗 Admin Shortlink',
-                                            'website'                => '🌐 Pengelola Website',
-                                            'medsos_instruktur'      => '👨‍🏫 Medsos Instruktur',
-                                            'medsos_planner'         => '📋 Medsos Planner',
-                                            'medsos_editor'          => '🎨 Medsos Editor',
-                                            'medsos_admin_platform'  => '🚀 Medsos Admin Platform',
-                                            'user'                   => '👥 Pengguna Biasa',
-                                        ])
+                                        ->options(function () {
+                                            $options = [
+                                                'admin'                  => '🛡️ Administrator Sistem',
+                                                'staff'                  => '💼 Staf Balai',
+                                                'shortlink'              => '🔗 Admin Shortlink',
+                                                'website'                => '🌐 Pengelola Website',
+                                                'medsos_instruktur'      => '👨‍🏫 Medsos Instruktur',
+                                                'medsos_planner'         => '📋 Medsos Planner',
+                                                'medsos_editor'          => '🎨 Medsos Editor',
+                                                'medsos_admin_platform'  => '🚀 Medsos Admin Platform',
+                                                'user'                   => '👥 Pengguna Biasa',
+                                            ];
+
+                                            if (Auth::user()?->isSuperAdmin()) {
+                                                $options = ['super_admin' => '👑 Super Admin (Full Root Access)'] + $options;
+                                            }
+
+                                            return $options;
+                                        })
                                         ->multiple()
                                         ->required()
                                         ->native(false)
@@ -146,6 +154,15 @@ class ManageUser extends Page
     {
         $validatedData = $this->form->getState();
         $roles = $validatedData['roles'] ?? ['user'];
+
+        // Jika bukan super_admin, cegah mendaftarkan akun sebagai super_admin
+        if (! (Auth::user()?->isSuperAdmin() ?? false)) {
+            $roles = array_diff((array) $roles, ['super_admin']);
+            if (empty($roles)) {
+                $roles = ['user'];
+            }
+        }
+
         $validatedData['role'] = is_array($roles) ? implode(',', $roles) : (string) $roles;
         unset($validatedData['roles']);
 
@@ -206,7 +223,8 @@ class DaftarUserTable extends TableWidget
                     ->badge()
                     ->separator(',')
                     ->color(fn(string $state): string => match ($state) {
-                        'admin', 'super_admin'                     => 'danger',
+                        'super_admin'                              => 'danger',
+                        'admin'                                    => 'danger',
                         'staff', 'pegawai'                         => 'warning',
                         'shortlink'                                => 'info',
                         'website'                                  => 'primary',
@@ -218,7 +236,8 @@ class DaftarUserTable extends TableWidget
                         default                                    => 'gray',
                     })
                     ->formatStateUsing(fn(string $state): string => match ($state) {
-                        'admin', 'super_admin'                     => '👑 Administrator',
+                        'super_admin'                              => '👑 Super Admin',
+                        'admin'                                    => '🛡️ Administrator',
                         'staff', 'pegawai'                         => '💼 Staf Balai',
                         'shortlink'                                => '🔗 Admin Shortlink',
                         'website'                                  => '🌐 Pengelola Web',
@@ -239,6 +258,7 @@ class DaftarUserTable extends TableWidget
             ->actions([
                 EditAction::make()
                     ->color('warning')
+                    ->visible(fn(User $record) => Auth::user()?->isSuperAdmin() || (! $record->isSuperAdmin()))
                     ->form([
                         Grid::make(2)->schema([
                             TextInput::make('name')
@@ -265,17 +285,25 @@ class DaftarUserTable extends TableWidget
 
                             Select::make('roles')
                                 ->label('Peran / Hak Akses Pengguna (Bisa Lebih Dari 1)')
-                                ->options([
-                                    'admin'                  => '👑 Administrator System',
-                                    'staff'                  => '💼 Staf Balai',
-                                    'shortlink'              => '🔗 Admin Shortlink',
-                                    'website'                => '🌐 Pengelola Website',
-                                    'medsos_instruktur'      => '👨‍🏫 Medsos Instruktur',
-                                    'medsos_planner'         => '📋 Medsos Planner',
-                                    'medsos_editor'          => '🎨 Medsos Editor',
-                                    'medsos_admin_platform'  => '🚀 Medsos Admin Platform',
-                                    'user'                   => '👥 Pengguna Biasa',
-                                ])
+                                ->options(function () {
+                                    $options = [
+                                        'admin'                  => '🛡️ Administrator Sistem',
+                                        'staff'                  => '💼 Staf Balai',
+                                        'shortlink'              => '🔗 Admin Shortlink',
+                                        'website'                => '🌐 Pengelola Website',
+                                        'medsos_instruktur'      => '👨‍🏫 Medsos Instruktur',
+                                        'medsos_planner'         => '📋 Medsos Planner',
+                                        'medsos_editor'          => '🎨 Medsos Editor',
+                                        'medsos_admin_platform'  => '🚀 Medsos Admin Platform',
+                                        'user'                   => '👥 Pengguna Biasa',
+                                    ];
+
+                                    if (Auth::user()?->isSuperAdmin()) {
+                                        $options = ['super_admin' => '👑 Super Admin (Full Root Access)'] + $options;
+                                    }
+
+                                    return $options;
+                                })
                                 ->multiple()
                                 ->required()
                                 ->native(false)
@@ -292,7 +320,17 @@ class DaftarUserTable extends TableWidget
 
                         if (isset($data['roles'])) {
                             $roles = is_array($data['roles']) ? $data['roles'] : [$data['roles']];
-                            $data['role'] = implode(',', $roles);
+
+                            // Hanya super_admin yang berhak memberi/mencabut role super_admin
+                            if (! (Auth::user()?->isSuperAdmin() ?? false)) {
+                                if ($record->isSuperAdmin()) {
+                                    $roles[] = 'super_admin';
+                                } else {
+                                    $roles = array_diff($roles, ['super_admin']);
+                                }
+                            }
+
+                            $data['role'] = implode(',', array_unique($roles));
                             unset($data['roles']);
                         }
 
@@ -302,7 +340,8 @@ class DaftarUserTable extends TableWidget
                     })
                     ->successNotificationTitle('Data pengguna dan hak akses berhasil diperbarui'),
 
-                DeleteAction::make(),
+                DeleteAction::make()
+                    ->visible(fn(User $record) => ! $record->isSuperAdmin() && Auth::id() !== $record->id),
             ]);
     }
 }
