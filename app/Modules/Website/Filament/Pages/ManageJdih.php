@@ -109,7 +109,7 @@ class ManageJdih extends Page
                         ->maxSize(15360)
                         ->disk('public')
                         ->visibility('public')
-                        ->directory('jdih/dokumen')
+                        ->directory('website/jdih/dokumen')
                         ->getUploadedFileNameForStorageUsing(function ($get, $file) {
                             return Str::slug($get('nomor_peraturan'))
                                 . '-' . time()
@@ -214,7 +214,7 @@ class DaftarJdihTable extends TableWidget
                             ->acceptedFileTypes(['application/pdf'])
                             ->disk('public')
                             ->visibility('public')
-                            ->directory('jdih/dokumen')
+                            ->directory('website/jdih/dokumen')
                             ->maxSize(15360),
                     ])
                     ->successNotificationTitle('Produk hukum berhasil diperbarui'),

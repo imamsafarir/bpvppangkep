@@ -61,6 +61,38 @@ class ManageWebsiteSettings extends Page
         $this->form->fill($this->getRecord()?->attributesToArray());
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            Action::make('migrate_images')
+                ->label('🔄 Sinkronisasi & Kompres Gambar')
+                ->color('warning')
+                ->icon('heroicon-o-arrow-path')
+                ->requiresConfirmation()
+                ->modalHeading('Sinkronisasi Gambar Website')
+                ->modalDescription('Proses ini akan memindahkan semua gambar lama ke folder website/ yang rapi dan mengompresnya ke format AVIF yang lebih ringan. Data di database akan diperbarui otomatis. Lanjutkan?')
+                ->modalSubmitActionLabel('Ya, Sinkronisasi Sekarang')
+                ->action(function () {
+                    try {
+                        $exitCode = \Illuminate\Support\Facades\Artisan::call('website:migrate-images');
+                        $output   = \Illuminate\Support\Facades\Artisan::output();
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Sinkronisasi Selesai')
+                            ->body('Semua gambar berhasil dipindahkan dan dikompres ke AVIF.')
+                            ->send();
+                    } catch (\Throwable $e) {
+                        \Filament\Notifications\Notification::make()
+                            ->danger()
+                            ->title('Sinkronisasi Gagal')
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                }),
+        ];
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
@@ -81,10 +113,9 @@ class ManageWebsiteSettings extends Page
                                 ->image()
                                 ->disk('public')
                                 ->visibility('public')
-                                ->directory('settings/branding')
-                                // 💡 KUNCI PENAMAAN RAPI
+                                ->directory('website/settings/branding')
                                 ->getUploadedFileNameForStorageUsing(
-                                    fn(TemporaryUploadedFile $file): string => 'logo_' . time() . '.' . $file->getClientOriginalExtension()
+                                    fn(TemporaryUploadedFile $file): string => 'logo_' . time() . '.avif'
                                 )
                                 ->maxSize(2048),
 
@@ -93,8 +124,7 @@ class ManageWebsiteSettings extends Page
                                 ->image()
                                 ->disk('public')
                                 ->visibility('public')
-                                ->directory('settings/branding')
-                                // 💡 KUNCI PENAMAAN RAPI
+                                ->directory('website/settings/branding')
                                 ->getUploadedFileNameForStorageUsing(
                                     fn(TemporaryUploadedFile $file): string => 'favicon_' . time() . '.' . $file->getClientOriginalExtension()
                                 )
@@ -109,10 +139,9 @@ class ManageWebsiteSettings extends Page
                                 ->appendFiles()
                                 ->disk('public')
                                 ->visibility('public')
-                                ->directory('settings/sliders')
-                                // 💡 KUNCI PENAMAAN RAPI MULTIPLE (ditambah string acak agar tidak bentrok saat upload barengan)
+                                ->directory('website/settings/sliders')
                                 ->getUploadedFileNameForStorageUsing(
-                                    fn(TemporaryUploadedFile $file): string => 'slider_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()
+                                    fn(TemporaryUploadedFile $file): string => 'slider_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                 )
                                 ->maxSize(5120)
                                 ->columnSpanFull()
@@ -163,10 +192,9 @@ class ManageWebsiteSettings extends Page
                                 ->image()
                                 ->disk('public')
                                 ->visibility('public')
-                                ->directory('settings/popup')
-                                // 💡 KUNCI PENAMAAN RAPI
+                                ->directory('website/settings/popup')
                                 ->getUploadedFileNameForStorageUsing(
-                                    fn(TemporaryUploadedFile $file): string => 'popup_' . time() . '.' . $file->getClientOriginalExtension()
+                                    fn(TemporaryUploadedFile $file): string => 'popup_' . time() . '.avif'
                                 )
                                 ->maxSize(2048),
                             TextInput::make('popup_redirect_url')->label('Link Tujuan Pengalihan (Optional)')->url()->columnSpanFull(),

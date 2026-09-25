@@ -80,7 +80,10 @@ class ManageProfil extends Page
                                                 ->label('Foto Resmi Kepala Balai')
                                                 ->image()
                                                 ->disk('public')
-                                                ->directory('profil/chief')
+                                                ->directory('website/profil/chief')
+                                                ->getUploadedFileNameForStorageUsing(
+                                                    fn($file): string => 'chief_' . time() . '.avif'
+                                                )
                                                 ->imageCropAspectRatio('3:4')
                                                 ->maxSize(2048)
                                                 ->columnSpan(['md' => 1]), // Foto memakan 1 kolom di desktop
@@ -106,7 +109,7 @@ class ManageProfil extends Page
                                     // Bagian Editor Teks Utama di bawah kartu identitas
                                     RichEditor::make('sambutan_kepala')
                                         ->label('Sambutan Kepala Balai')
-                                        ->fileAttachmentsDirectory('profil/sambutan')
+                                        ->fileAttachmentsDirectory('website/profil/sambutan')
                                         ->columnSpanFull(),
 
                                     RichEditor::make('tentang_kami')
@@ -137,7 +140,10 @@ class ManageProfil extends Page
                                         ->label('Foto Struktur Organisasi')
                                         ->image()
                                         ->disk('public')
-                                        ->directory('profil/struktur')
+                                        ->directory('website/profil/struktur')
+                                        ->getUploadedFileNameForStorageUsing(
+                                            fn($file): string => 'struktur_' . time() . '.avif'
+                                        )
                                         ->maxSize(2048),
 
                                     Repeater::make('pejabat_struktural')
@@ -155,7 +161,10 @@ class ManageProfil extends Page
                                                 ->label('Foto Pas Pejabat')
                                                 ->image()
                                                 ->disk('public')
-                                                ->directory('profil/pejabat')
+                                                ->directory('website/profil/pejabat')
+                                                ->getUploadedFileNameForStorageUsing(
+                                                    fn($file): string => 'pejabat_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
+                                                )
                                                 ->imageCropAspectRatio('3:4')
                                                 ->maxSize(1024),
 

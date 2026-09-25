@@ -62,6 +62,34 @@ class StatistikTim extends Page implements HasTable
                 ->label('📋 Daftar Konten')
                 ->color('gray')
                 ->url(fn() => ContentResource::getUrl('index')),
+
+            // Tombol sinkronisasi folder media: hanya terlihat oleh Admin
+            Action::make('migrate_media')
+                ->label('🔄 Sinkronisasi Folder Media')
+                ->color('warning')
+                ->icon('heroicon-o-arrow-path')
+                ->visible(fn() => auth()->user()?->isAdmin() ?? false)
+                ->requiresConfirmation()
+                ->modalHeading('Sinkronisasi Folder Media TimSosmed')
+                ->modalDescription('Proses ini akan memindahkan semua file media dari folder content/ ke timsosmed/content/ yang lebih rapi. Lakukan sekali saja setelah deployment pertama. Lanjutkan?')
+                ->modalSubmitActionLabel('Ya, Sinkronisasi Sekarang')
+                ->action(function () {
+                    try {
+                        \Illuminate\Support\Facades\Artisan::call('timsosmed:migrate-media');
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Sinkronisasi Selesai')
+                            ->body('Semua file media TimSosmed berhasil dipindahkan ke folder timsosmed/content/.')
+                            ->send();
+                    } catch (\Throwable $e) {
+                        \Filament\Notifications\Notification::make()
+                            ->danger()
+                            ->title('Sinkronisasi Gagal')
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                }),
         ];
     }
 

@@ -104,7 +104,7 @@ class ManageBeritaDanGaleri extends Page
                     RichEditor::make('konten_berita')
                         ->label('Isi Berita')
                         ->fileAttachmentsDisk('public')
-                        ->fileAttachmentsDirectory('berita/konten')
+                        ->fileAttachmentsDirectory('website/berita/konten')
                         ->visible(fn(Get $get) => $get('jenis') === 'berita')
                         ->columnSpanFull(),
 
@@ -122,13 +122,13 @@ class ManageBeritaDanGaleri extends Page
                         ->image()
                         // 🟢 Hanya muncul jika jenisnya 'berita'
                         ->visible(fn(Get $get) => $get('jenis') === 'berita')
-                        ->directory('berita/sampul')
+                        ->directory('website/berita/sampul')
                         ->getUploadedFileNameForStorageUsing(function (Get $get, $file) {
                             $base = $get('judul_berita');
-                            return Str::slug($base ?? 'file')
+                            return Str::slug($base ?? 'berita')
                                 . '-' . time()
                                 . '-' . bin2hex(random_bytes(4))
-                                . '.' . $file->getClientOriginalExtension();
+                                . '.avif';
                         }),
 
                     /* ================= FOTO UNTUK GALERI (MULTIPLE) ================= */
@@ -141,13 +141,13 @@ class ManageBeritaDanGaleri extends Page
                         ->multiple()
                         // 🟢 Hanya muncul jika jenisnya 'galeri'
                         ->visible(fn(Get $get) => $get('jenis') === 'galeri')
-                        ->directory('galeri/foto')
+                        ->directory('website/galeri/foto')
                         ->getUploadedFileNameForStorageUsing(function (Get $get, $file) {
                             $base = $get('keterangan_galeri');
-                            return Str::slug($base ?? 'file')
+                            return Str::slug($base ?? 'galeri')
                                 . '-' . time()
                                 . '-' . bin2hex(random_bytes(4))
-                                . '.' . $file->getClientOriginalExtension();
+                                . '.avif';
                         }),
                 ])
                     ->livewireSubmitHandler('save')
@@ -232,8 +232,8 @@ class DaftarBeritaTable extends TableWidget
                             ->label('Foto Sampul Berita')
                             ->disk('public')
                             ->image()
-                            ->directory('berita/sampul')
-                            ->getUploadedFileNameForStorageUsing(fn($file) => 'berita-' . time() . '-' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()),
+                            ->directory('website/berita/sampul')
+                            ->getUploadedFileNameForStorageUsing(fn($file) => 'berita-' . time() . '-' . bin2hex(random_bytes(4)) . '.avif'),
                     ])
                     // 💡 PERBAIKAN: Menggunakan using() untuk handle kustomisasi save di Table Action
                     ->using(function (\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model {
@@ -314,13 +314,13 @@ class DaftarGaleriTable extends TableWidget
                             ->visibility('public')
                             ->image()
                             ->multiple() // Dikunci multiple karena galeri menampung banyak foto
-                            ->directory('galeri/foto') // Diarahkan ke folder galeri asli
+                            ->directory('website/galeri/foto') // Diarahkan ke folder galeri website
                             ->getUploadedFileNameForStorageUsing(function (Get $get, $file) {
                                 $base = $get('keterangan_galeri');
                                 return Str::slug($base ?? 'galeri')
                                     . '-' . time()
                                     . '-' . bin2hex(random_bytes(4))
-                                    . '.' . $file->getClientOriginalExtension();
+                                    . '.avif';
                             }),
                     ])
                     ->using(function (\Illuminate\Database\Eloquent\Model $record, array $data): \Illuminate\Database\Eloquent\Model {

@@ -100,7 +100,7 @@ class ManageInformasiPublik extends Page
                         ->visible(fn(Get $get) => filled($get('kategori')))
                         ->disk('public')
                         ->visibility('public')
-                        ->directory(fn(Get $get) => 'informasi-publik/' . $get('kategori'))
+                        ->directory(fn(Get $get) => 'website/informasi-publik/' . $get('kategori'))
                         ->getUploadedFileNameForStorageUsing(function (Get $get, $file) {
                             return Str::slug($get('nama_dokumen'))
                                 . '-' . time()
@@ -182,7 +182,7 @@ abstract class BaseInformasiPublikTable extends TableWidget
                         FileUpload::make('file_path')
                             ->disk('public')
                             ->visibility('public')
-                            ->directory('informasi-publik/' . static::$kategori)
+                            ->directory('website/informasi-publik/' . static::$kategori)
                             ->maxSize(10240)
                             ->getUploadedFileNameForStorageUsing(function (Get $get, $file) {
                                 return Str::slug($get('nama_dokumen'))

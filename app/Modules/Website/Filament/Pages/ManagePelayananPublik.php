@@ -82,7 +82,7 @@ class ManagePelayananPublik extends Page
                                     FileUpload::make('file_maklumat')
                                         ->label('File Dokumen (PDF) / Foto')
                                         ->disk('public')
-                                        ->directory('pelayanan/maklumat')
+                                        ->directory('website/pelayanan/maklumat')
                                         ->maxSize(5120)
                                         // 💡 PENAMAAN RAPI BERDASARKAN JUDUL MAKLUMAT
                                         ->getUploadedFileNameForStorageUsing(
@@ -111,7 +111,7 @@ class ManagePelayananPublik extends Page
                                     FileUpload::make('file_standar')
                                         ->label('File Dokumen (PDF) / Foto')
                                         ->disk('public')
-                                        ->directory('pelayanan/standar')
+                                        ->directory('website/pelayanan/standar')
                                         ->maxSize(10240)
                                         // 💡 PENAMAAN RAPI BERDASARKAN JUDUL STANDAR
                                         ->getUploadedFileNameForStorageUsing(
@@ -141,11 +141,11 @@ class ManagePelayananPublik extends Page
                                         ->label('Bagan / Foto Alur')
                                         ->image()
                                         ->disk('public')
-                                        ->directory('pelayanan/alur')
+                                        ->directory('website/pelayanan/alur')
                                         ->maxSize(3072)
-                                        // 💡 PENAMAAN RAPI BERDASARKAN JUDUL ALUR
+                                        // Penamaan rapi berdasarkan judul alur, output .avif
                                         ->getUploadedFileNameForStorageUsing(
-                                            fn(Get $get, TemporaryUploadedFile $file): string => Str::slug($get('judul_alur') ?? 'alur') . '-' . time() . '-' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()
+                                            fn(Get $get, TemporaryUploadedFile $file): string => Str::slug($get('judul_alur') ?? 'alur') . '-' . time() . '-' . bin2hex(random_bytes(4)) . '.avif'
                                         ),
                                     RichEditor::make('deskripsi_alur')
                                         ->label('Keterangan Tambahan')

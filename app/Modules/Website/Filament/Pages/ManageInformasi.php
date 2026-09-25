@@ -77,10 +77,9 @@ class ManageInformasi extends Page
                                                 ->label('Foto / Gambar Kejuruan')
                                                 ->disk('public')
                                                 ->image()
-                                                ->directory('informasi/kejuruan')
-                                                // 💡 KUNCI PENAMAAN RAPI KEJURUAN
+                                                ->directory('website/informasi/kejuruan')
                                                 ->getUploadedFileNameForStorageUsing(
-                                                    fn(TemporaryUploadedFile $file): string => 'kejuruan_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()
+                                                    fn(TemporaryUploadedFile $file): string => 'kejuruan_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(2048),
                                             RichEditor::make('deskripsi_kejuruan')->label('Deskripsi / Detail Kejuruan')->columnSpanFull(),
@@ -98,10 +97,9 @@ class ManageInformasi extends Page
                                                 ->label('Foto Fasilitas')
                                                 ->disk('public')
                                                 ->image()
-                                                ->directory('informasi/fasilitas')
-                                                // 💡 KUNCI PENAMAAN RAPI FASILITAS
+                                                ->directory('website/informasi/fasilitas')
                                                 ->getUploadedFileNameForStorageUsing(
-                                                    fn(TemporaryUploadedFile $file): string => 'fasilitas_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()
+                                                    fn(TemporaryUploadedFile $file): string => 'fasilitas_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(3072),
                                             RichEditor::make('deskripsi_fasilitas')->label('Keterangan Gedung / Sarana')->columnSpanFull(),
@@ -119,10 +117,9 @@ class ManageInformasi extends Page
                                                 ->label('Foto Kondisi Ruangan')
                                                 ->disk('public')
                                                 ->image()
-                                                ->directory('informasi/workshop')
-                                                // 💡 KUNCI PENAMAAN RAPI WORKSHOP
+                                                ->directory('website/informasi/workshop')
                                                 ->getUploadedFileNameForStorageUsing(
-                                                    fn(TemporaryUploadedFile $file): string => 'workshop_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()
+                                                    fn(TemporaryUploadedFile $file): string => 'workshop_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(3072),
                                             RichEditor::make('deskripsi_ruangan')->label('Detail Fasilitas Ruangan')->columnSpanFull(),
@@ -140,10 +137,9 @@ class ManageInformasi extends Page
                                                 ->label('Foto Dokumentasi Alumni')
                                                 ->disk('public')
                                                 ->image()
-                                                ->directory('informasi/alumni')
-                                                // 💡 KUNCI PENAMAAN RAPI ALUMNI
+                                                ->directory('website/informasi/alumni')
                                                 ->getUploadedFileNameForStorageUsing(
-                                                    fn(TemporaryUploadedFile $file): string => 'alumni_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()
+                                                    fn(TemporaryUploadedFile $file): string => 'alumni_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(2048),
                                             RichEditor::make('catatan_alumni')->label('Detail Informasi / Karir Alumni')->columnSpanFull(),
@@ -163,11 +159,10 @@ class ManageInformasi extends Page
                                                 ->label('Foto Alumni')
                                                 ->disk('public')
                                                 ->image()
-                                                ->directory('informasi/testimoni')
+                                                ->directory('website/informasi/testimoni')
                                                 ->imageCropAspectRatio('1:1')
-                                                // 💡 KUNCI PENAMAAN RAPI TESTIMONI
                                                 ->getUploadedFileNameForStorageUsing(
-                                                    fn(TemporaryUploadedFile $file): string => 'testimoni_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()
+                                                    fn(TemporaryUploadedFile $file): string => 'testimoni_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(1024),
                                         ])->columns(2)->createItemButtonLabel('Tambah Testimoni Baru'),
@@ -183,11 +178,10 @@ class ManageInformasi extends Page
                                                 ->label('Logo Instansi / Perusahaan')
                                                 ->disk('public')
                                                 ->image()
-                                                ->directory('informasi/kerjasama')
+                                                ->directory('website/informasi/kerjasama')
                                                 ->imagePreviewHeight('100')
-                                                // 💡 KUNCI PENAMAAN RAPI MITRA KERJASAMA
                                                 ->getUploadedFileNameForStorageUsing(
-                                                    fn(TemporaryUploadedFile $file): string => 'kerjasama_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $file->getClientOriginalExtension()
+                                                    fn(TemporaryUploadedFile $file): string => 'kerjasama_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(1024),
                                             TextInput::make('nama_instansi')

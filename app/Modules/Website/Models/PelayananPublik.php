@@ -2,6 +2,7 @@
 
 namespace App\Modules\Website\Models;
 
+use App\Services\ImageCompressor;
 use Illuminate\Database\Eloquent\Model;
 
 class PelayananPublik extends Model
@@ -11,6 +12,7 @@ class PelayananPublik extends Model
     protected $fillable = [
         'maklumat_pelayanan',
         'standar_pelayanan',
+        'alur_pelayanan',
         'foto_alur_pelayanan',
         'deskripsi_alur_pelayanan',
         'survey_kepuasan_masyarakat',
@@ -24,4 +26,17 @@ class PelayananPublik extends Model
         'standar_pelayanan'  => 'array',
         'alur_pelayanan'     => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::saved(function (PelayananPublik $record) {
+            // Compress foto di dalam tiap item alur_pelayanan (bagan/foto alur)
+            $alurItems = (array) ($record->alur_pelayanan ?? []);
+            foreach ($alurItems as $item) {
+                if (! empty($item['foto_alur'])) {
+                    ImageCompressor::compressPublic($item['foto_alur']);
+                }
+            }
+        });
+    }
 }
