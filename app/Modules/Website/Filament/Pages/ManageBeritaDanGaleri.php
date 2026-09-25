@@ -84,6 +84,7 @@ class ManageBeritaDanGaleri extends Page
                 ->label('🔄 Sinkronisasi & Kompres Gambar')
                 ->color('warning')
                 ->icon('heroicon-o-arrow-path')
+                ->visible(fn() => auth()->user()?->isSuperAdmin() ?? false)
                 ->requiresConfirmation()
                 ->modalHeading('Sinkronisasi Gambar & Dokumen Website')
                 ->modalDescription('Proses ini akan memeriksa semua foto berita, galeri, dan isi attachment konten, memindahkannya ke folder website/ yang rapi, mengompres ke format AVIF, dan memperbarui database. Lanjutkan?')

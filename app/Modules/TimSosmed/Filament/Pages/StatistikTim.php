@@ -63,12 +63,12 @@ class StatistikTim extends Page implements HasTable
                 ->color('gray')
                 ->url(fn() => ContentResource::getUrl('index')),
 
-            // Tombol sinkronisasi folder media: hanya terlihat oleh Admin
+            // Tombol sinkronisasi folder media: hanya terlihat oleh SuperAdmin
             Action::make('migrate_media')
                 ->label('🔄 Sinkronisasi Folder Media')
                 ->color('warning')
                 ->icon('heroicon-o-arrow-path')
-                ->visible(fn() => auth()->user()?->isAdmin() ?? false)
+                ->visible(fn() => auth()->user()?->isSuperAdmin() ?? false)
                 ->requiresConfirmation()
                 ->modalHeading('Sinkronisasi Folder Media TimSosmed')
                 ->modalDescription('Proses ini akan memindahkan semua file media dari folder content/ ke timsosmed/content/ yang lebih rapi. Lakukan sekali saja setelah deployment pertama. Lanjutkan?')

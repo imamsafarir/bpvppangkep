@@ -69,6 +69,7 @@ class ManageInformasiPublik extends Page
                 ->label('🔄 Sinkronisasi & Kompres Gambar')
                 ->color('warning')
                 ->icon('heroicon-o-arrow-path')
+                ->visible(fn() => auth()->user()?->isSuperAdmin() ?? false)
                 ->requiresConfirmation()
                 ->modalHeading('Sinkronisasi File & Dokumen Website')
                 ->modalDescription('Proses ini akan memeriksa seluruh dokumen informasi publik dan memindahkannya ke direktori website/informasi-publik/ yang rapi. Lanjutkan?')

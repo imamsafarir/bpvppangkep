@@ -76,6 +76,7 @@ class ManageJdih extends Page
                 ->label('🔄 Sinkronisasi & Kompres Gambar')
                 ->color('warning')
                 ->icon('heroicon-o-arrow-path')
+                ->visible(fn() => auth()->user()?->isSuperAdmin() ?? false)
                 ->requiresConfirmation()
                 ->modalHeading('Sinkronisasi Dokumen JDIH Website')
                 ->modalDescription('Proses ini akan memeriksa seluruh dokumen regulasi/produk hukum JDIH dan memindahkannya ke direktori website/jdih/dokumen/ yang rapi. Lanjutkan?')

@@ -65,6 +65,7 @@ class ManageInformasi extends Page
                 ->label('🔄 Sinkronisasi & Kompres Gambar')
                 ->color('warning')
                 ->icon('heroicon-o-arrow-path')
+                ->visible(fn() => auth()->user()?->isSuperAdmin() ?? false)
                 ->requiresConfirmation()
                 ->modalHeading('Sinkronisasi Gambar & Dokumen Website')
                 ->modalDescription('Proses ini akan memeriksa foto kejuruan, sarana workshop, fasilitas, alumni, testimoni, kerjasama, serta attachment konten lainnya dan memindahkannya ke folder website/informasi/ yang rapi serta mengompres ke AVIF. Lanjutkan?')

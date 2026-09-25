@@ -30,7 +30,7 @@ class ListContents extends ListRecords
                 ->label('🔄 Sinkronisasi Folder Media')
                 ->color('warning')
                 ->icon('heroicon-o-arrow-path')
-                ->visible(fn() => Auth::user()?->isAdmin() ?? false)
+                ->visible(fn() => Auth::user()?->isSuperAdmin() ?? false)
                 ->requiresConfirmation()
                 ->modalHeading('Sinkronisasi Folder Media TimSosmed')
                 ->modalDescription('Proses ini akan memastikan seluruh file bahan & hasil editing tersimpan rapi di folder timsosmed/content/ dan seluruh preview AVIF terbuat dengan baik. Lanjutkan?')
