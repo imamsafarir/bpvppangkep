@@ -113,7 +113,7 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            // HOOK: PWA Manifest, Service Worker & Performance Hints
+            // HOOK: PWA Manifest & Performance Hints (Service Worker dinonaktifkan di Admin Panel untuk kestabilan Livewire)
             ->renderHook(
                 'panels::head.done',
                 fn(): string => '
@@ -122,11 +122,6 @@ class AdminPanelProvider extends PanelProvider
                 <meta name="apple-mobile-web-app-capable" content="yes">
                 <link rel="preconnect" href="' . url('/') . '" crossorigin>
                 <link rel="dns-prefetch" href="//fonts.bunny.net">
-                <script>
-                    if ("serviceWorker" in navigator) {
-                        navigator.serviceWorker.register("/sw.js");
-                    }
-                </script>
                 '
             );
     }
