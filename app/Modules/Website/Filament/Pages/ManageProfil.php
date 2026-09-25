@@ -60,6 +60,38 @@ class ManageProfil extends Page
         $this->form->fill($this->getRecord()?->attributesToArray());
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            \Filament\Actions\Action::make('migrate_images')
+                ->label('🔄 Sinkronisasi & Kompres Gambar')
+                ->color('warning')
+                ->icon('heroicon-o-arrow-path')
+                ->requiresConfirmation()
+                ->modalHeading('Sinkronisasi Gambar & Dokumen Website')
+                ->modalDescription('Proses ini akan memeriksa foto kepala balai, struktur organisasi, foto pejabat, serta attachment teks sambutan dan memindahkannya ke folder website/profil yang rapi serta mengompres ke AVIF. Lanjutkan?')
+                ->modalSubmitActionLabel('Ya, Sinkronisasi Sekarang')
+                ->action(function () {
+                    try {
+                        \Illuminate\Support\Facades\Artisan::call('website:migrate-images');
+                        $this->form->fill($this->getRecord()?->attributesToArray());
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Sinkronisasi Selesai')
+                            ->body('Seluruh gambar profil balai dan attachment berhasil disinkronkan ke AVIF.')
+                            ->send();
+                    } catch (\Throwable $e) {
+                        \Filament\Notifications\Notification::make()
+                            ->danger()
+                            ->title('Sinkronisasi Gagal')
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                }),
+        ];
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
@@ -114,6 +146,8 @@ class ManageProfil extends Page
 
                                     RichEditor::make('tentang_kami')
                                         ->label('Tentang Kami')
+                                        ->fileAttachmentsDisk('public')
+                                        ->fileAttachmentsDirectory('website/profil/tentang')
                                         ->columnSpanFull(),
                                 ]),
 
@@ -121,16 +155,22 @@ class ManageProfil extends Page
                             Tab::make('Visi, Misi & Tupoksi')
                                 ->schema([
                                     RichEditor::make('visi_misi')
-                                        ->label('Visi & Misi'),
+                                        ->label('Visi & Misi')
+                                        ->fileAttachmentsDisk('public')
+                                        ->fileAttachmentsDirectory('website/profil/visi-misi'),
                                     RichEditor::make('tugas_fungsi')
-                                        ->label('Tugas dan Fungsi'),
+                                        ->label('Tugas dan Fungsi')
+                                        ->fileAttachmentsDisk('public')
+                                        ->fileAttachmentsDirectory('website/profil/tugas-fungsi'),
                                 ]),
 
                             // TAB 3: PPID
                             Tab::make('PPID')
                                 ->schema([
                                     RichEditor::make('ppid')
-                                        ->label('Konten PPID'),
+                                        ->label('Konten PPID')
+                                        ->fileAttachmentsDisk('public')
+                                        ->fileAttachmentsDirectory('website/profil/ppid'),
                                 ]),
 
                             // TAB 4: STRUKTUR & PEJABAT

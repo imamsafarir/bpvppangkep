@@ -259,7 +259,11 @@ class DaftarBeritaTable extends TableWidget
                     ->form([
                         TextInput::make('judul_berita')->label('Judul Berita')->required(),
                         TagsInput::make('tags')->label('Kategori / Tags'),
-                        RichEditor::make('konten_berita')->label('Isi Berita')->columnSpanFull(),
+                        RichEditor::make('konten_berita')
+                            ->label('Isi Berita')
+                            ->fileAttachmentsDisk('public')
+                            ->fileAttachmentsDirectory('website/berita/konten')
+                            ->columnSpanFull(),
                         FileUpload::make('file_foto')
                             ->label('Foto Sampul Berita')
                             ->disk('public')

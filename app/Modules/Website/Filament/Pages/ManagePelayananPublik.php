@@ -62,6 +62,38 @@ class ManagePelayananPublik extends Page
         $this->form->fill($this->getRecord()?->attributesToArray());
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            \Filament\Actions\Action::make('migrate_images')
+                ->label('🔄 Sinkronisasi & Kompres Gambar')
+                ->color('warning')
+                ->icon('heroicon-o-arrow-path')
+                ->requiresConfirmation()
+                ->modalHeading('Sinkronisasi Gambar & Dokumen Website')
+                ->modalDescription('Proses ini akan memeriksa foto alur pelayanan, file maklumat, standar pelayanan, dan attachment teks penjelasan serta memindahkannya ke folder website/pelayanan/ yang rapi serta mengompres ke AVIF. Lanjutkan?')
+                ->modalSubmitActionLabel('Ya, Sinkronisasi Sekarang')
+                ->action(function () {
+                    try {
+                        \Illuminate\Support\Facades\Artisan::call('website:migrate-images');
+                        $this->form->fill($this->getRecord()?->attributesToArray());
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Sinkronisasi Selesai')
+                            ->body('Seluruh dokumen pelayanan dan attachment berhasil disinkronkan ke AVIF.')
+                            ->send();
+                    } catch (\Throwable $e) {
+                        \Filament\Notifications\Notification::make()
+                            ->danger()
+                            ->title('Sinkronisasi Gagal')
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                }),
+        ];
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
@@ -90,6 +122,8 @@ class ManagePelayananPublik extends Page
                                         ),
                                     RichEditor::make('keterangan_maklumat')
                                         ->label('Keterangan Tambahan')
+                                        ->fileAttachmentsDisk('public')
+                                        ->fileAttachmentsDirectory('website/pelayanan/maklumat/konten')
                                         ->columnSpanFull(),
                                 ])
                                 ->columns(2)
@@ -119,6 +153,8 @@ class ManagePelayananPublik extends Page
                                         ),
                                     RichEditor::make('keterangan_standar')
                                         ->label('Keterangan / Komponen Standar')
+                                        ->fileAttachmentsDisk('public')
+                                        ->fileAttachmentsDirectory('website/pelayanan/standar/konten')
                                         ->columnSpanFull(),
                                 ])
                                 ->columns(2)
@@ -149,6 +185,8 @@ class ManagePelayananPublik extends Page
                                         ),
                                     RichEditor::make('deskripsi_alur')
                                         ->label('Keterangan Tambahan')
+                                        ->fileAttachmentsDisk('public')
+                                        ->fileAttachmentsDirectory('website/pelayanan/alur/konten')
                                         ->columnSpanFull(),
                                 ])
                                 ->columns(2)
@@ -205,7 +243,9 @@ class ManagePelayananPublik extends Page
                         ->description('Tampilkan laporan statistik nilai atau ringkasan pencapaian IKM Balai.')
                         ->schema([
                             RichEditor::make('indeks_kepuasan_masyarakat')
-                                ->label('Laporan Nilai / Indeks Kepuasan'),
+                                ->label('Laporan Nilai / Indeks Kepuasan')
+                                ->fileAttachmentsDisk('public')
+                                ->fileAttachmentsDirectory('website/pelayanan/ikm/konten'),
                         ]),
 
                 ])

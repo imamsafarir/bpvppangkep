@@ -171,6 +171,24 @@ class MigrateWebsiteImages extends Command
             }
         }
 
+        // tentang kami, visi misi, tugas fungsi, ppid (HTML RichEditor content)
+        $richFields = [
+            'tentang_kami'  => 'website/profil/tentang',
+            'visi_misi'     => 'website/profil/visi-misi',
+            'tugas_fungsi'  => 'website/profil/tugas-fungsi',
+            'ppid'          => 'website/profil/ppid',
+        ];
+
+        foreach ($richFields as $field => $folder) {
+            if (! empty($profil->$field)) {
+                $newHtml = $this->migrateHtmlAttachments($profil->$field, $folder);
+                if ($newHtml !== $profil->$field) {
+                    $data[$field] = $newHtml;
+                    $changed      = true;
+                }
+            }
+        }
+
         // pejabat struktural (JSON repeater)
         $pejabat    = (array) ($profil->pejabat_struktural ?? []);
         $newPejabat = [];
@@ -205,7 +223,7 @@ class MigrateWebsiteImages extends Command
 
     private function migrateInformasi(): void
     {
-        $this->line('📚 Memproses Informasi (Kejuruan, Fasilitas, Workshop, Testimoni)...');
+        $this->line('📚 Memproses Informasi (Kejuruan, Fasilitas, Workshop, Testimoni, Kerjasama, FAQ)...');
 
         $info = Informasi::first();
         if (! $info) {
@@ -213,30 +231,47 @@ class MigrateWebsiteImages extends Command
         }
 
         $repeaterMap = [
-            'kejuruan'         => 'foto_kejuruan',
-            'gedung_fasilitas' => 'foto_fasilitas',
-            'kelas_workshop'   => 'foto_ruangan',
-            'alumni'           => 'foto_kegiatan_alumni',
-            'testimoni'        => 'foto_alumni',
-            'kerjasama'        => 'logo',
+            'kejuruan'         => ['foto' => 'foto_kejuruan', 'html' => ['deskripsi_kejuruan' => 'website/informasi/kejuruan/konten']],
+            'gedung_fasilitas' => ['foto' => 'foto_fasilitas', 'html' => ['deskripsi_fasilitas' => 'website/informasi/fasilitas/konten']],
+            'kelas_workshop'   => ['foto' => 'foto_ruangan',   'html' => ['deskripsi_ruangan'   => 'website/informasi/workshop/konten']],
+            'alumni'           => ['foto' => 'foto_kegiatan_alumni', 'html' => ['catatan_alumni' => 'website/informasi/alumni/konten']],
+            'testimoni'        => ['foto' => 'foto_alumni',    'html' => ['isi_testimoni'       => 'website/informasi/testimoni/konten']],
+            'kerjasama'        => ['foto' => 'logo',           'html' => ['bentuk_kerjasama'    => 'website/informasi/kerjasama/konten']],
+            'faq'              => ['foto' => null,             'html' => ['jawaban'             => 'website/informasi/faq/konten']],
         ];
 
         $data    = [];
         $changed = false;
 
-        foreach ($repeaterMap as $field => $imageKey) {
+        foreach ($repeaterMap as $field => $config) {
             $items        = (array) ($info->$field ?? []);
             $newItems     = [];
             $fieldChanged = false;
 
             foreach ($items as $item) {
-                if (! empty($item[$imageKey])) {
+                // Gambar utama repeater
+                $imageKey = $config['foto'];
+                if ($imageKey && ! empty($item[$imageKey])) {
                     $newPath = $this->migrateAndConvertFile($item[$imageKey], true);
                     if ($newPath !== $item[$imageKey]) {
                         $item[$imageKey] = $newPath;
                         $fieldChanged    = true;
                     }
                 }
+
+                // Konten RichEditor di dalam repeater
+                if (! empty($config['html'])) {
+                    foreach ($config['html'] as $htmlKey => $targetFolder) {
+                        if (! empty($item[$htmlKey])) {
+                            $newHtml = $this->migrateHtmlAttachments($item[$htmlKey], $targetFolder);
+                            if ($newHtml !== $item[$htmlKey]) {
+                                $item[$htmlKey] = $newHtml;
+                                $fieldChanged   = true;
+                            }
+                        }
+                    }
+                }
+
                 $newItems[] = $item;
             }
 
@@ -268,7 +303,7 @@ class MigrateWebsiteImages extends Command
 
         $dbUpdates = [];
 
-        // 1. Alur pelayanan (foto/gambar)
+        // 1. Alur pelayanan (foto/gambar & konten HTML)
         $alur = (array) ($pelayanan->alur_pelayanan ?? []);
         $newAlur = [];
         $alurChanged = false;
@@ -281,6 +316,13 @@ class MigrateWebsiteImages extends Command
                     $alurChanged       = true;
                 }
             }
+            if (! empty($item['deskripsi_alur'])) {
+                $newHtml = $this->migrateHtmlAttachments($item['deskripsi_alur'], 'website/pelayanan/alur/konten');
+                if ($newHtml !== $item['deskripsi_alur']) {
+                    $item['deskripsi_alur'] = $newHtml;
+                    $alurChanged            = true;
+                }
+            }
             $newAlur[] = $item;
         }
 
@@ -288,7 +330,7 @@ class MigrateWebsiteImages extends Command
             $dbUpdates['alur_pelayanan'] = json_encode(array_values($newAlur));
         }
 
-        // 2. Maklumat pelayanan (dokumen/gambar)
+        // 2. Maklumat pelayanan (dokumen/gambar & keterangan HTML)
         $maklumat = (array) ($pelayanan->maklumat_pelayanan ?? []);
         $newMaklumat = [];
         $maklumatChanged = false;
@@ -301,6 +343,13 @@ class MigrateWebsiteImages extends Command
                     $maklumatChanged       = true;
                 }
             }
+            if (! empty($item['keterangan_maklumat'])) {
+                $newHtml = $this->migrateHtmlAttachments($item['keterangan_maklumat'], 'website/pelayanan/maklumat/konten');
+                if ($newHtml !== $item['keterangan_maklumat']) {
+                    $item['keterangan_maklumat'] = $newHtml;
+                    $maklumatChanged             = true;
+                }
+            }
             $newMaklumat[] = $item;
         }
 
@@ -308,7 +357,7 @@ class MigrateWebsiteImages extends Command
             $dbUpdates['maklumat_pelayanan'] = json_encode(array_values($newMaklumat));
         }
 
-        // 3. Standar pelayanan (dokumen/gambar)
+        // 3. Standar pelayanan (dokumen/gambar & keterangan HTML)
         $standar = (array) ($pelayanan->standar_pelayanan ?? []);
         $newStandar = [];
         $standarChanged = false;
@@ -321,11 +370,26 @@ class MigrateWebsiteImages extends Command
                     $standarChanged       = true;
                 }
             }
+            if (! empty($item['keterangan_standar'])) {
+                $newHtml = $this->migrateHtmlAttachments($item['keterangan_standar'], 'website/pelayanan/standar/konten');
+                if ($newHtml !== $item['keterangan_standar']) {
+                    $item['keterangan_standar'] = $newHtml;
+                    $standarChanged             = true;
+                }
+            }
             $newStandar[] = $item;
         }
 
         if ($standarChanged) {
             $dbUpdates['standar_pelayanan'] = json_encode(array_values($newStandar));
+        }
+
+        // 4. Indeks Kepuasan Masyarakat (IKM RichEditor HTML)
+        if (! empty($pelayanan->indeks_kepuasan_masyarakat)) {
+            $newIkm = $this->migrateHtmlAttachments($pelayanan->indeks_kepuasan_masyarakat, 'website/pelayanan/ikm/konten');
+            if ($newIkm !== $pelayanan->indeks_kepuasan_masyarakat) {
+                $dbUpdates['indeks_kepuasan_masyarakat'] = $newIkm;
+            }
         }
 
         if (! empty($dbUpdates)) {

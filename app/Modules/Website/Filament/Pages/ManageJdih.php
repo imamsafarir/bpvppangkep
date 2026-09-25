@@ -69,6 +69,37 @@ class ManageJdih extends Page
 
     public ?array $data = [];
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            \Filament\Actions\Action::make('migrate_images')
+                ->label('🔄 Sinkronisasi & Kompres Gambar')
+                ->color('warning')
+                ->icon('heroicon-o-arrow-path')
+                ->requiresConfirmation()
+                ->modalHeading('Sinkronisasi Dokumen JDIH Website')
+                ->modalDescription('Proses ini akan memeriksa seluruh dokumen regulasi/produk hukum JDIH dan memindahkannya ke direktori website/jdih/dokumen/ yang rapi. Lanjutkan?')
+                ->modalSubmitActionLabel('Ya, Sinkronisasi Sekarang')
+                ->action(function () {
+                    try {
+                        \Illuminate\Support\Facades\Artisan::call('website:migrate-images');
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Sinkronisasi Selesai')
+                            ->body('Seluruh dokumen regulasi JDIH berhasil disinkronkan ke folder terpusat.')
+                            ->send();
+                    } catch (\Throwable $e) {
+                        \Filament\Notifications\Notification::make()
+                            ->danger()
+                            ->title('Sinkronisasi Gagal')
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                }),
+        ];
+    }
+
     public function mount(): void
     {
         $this->form->fill();

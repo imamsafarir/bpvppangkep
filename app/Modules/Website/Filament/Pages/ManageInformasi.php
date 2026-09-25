@@ -58,6 +58,38 @@ class ManageInformasi extends Page
         $this->form->fill($this->getRecord()?->attributesToArray());
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            \Filament\Actions\Action::make('migrate_images')
+                ->label('🔄 Sinkronisasi & Kompres Gambar')
+                ->color('warning')
+                ->icon('heroicon-o-arrow-path')
+                ->requiresConfirmation()
+                ->modalHeading('Sinkronisasi Gambar & Dokumen Website')
+                ->modalDescription('Proses ini akan memeriksa foto kejuruan, sarana workshop, fasilitas, alumni, testimoni, kerjasama, serta attachment konten lainnya dan memindahkannya ke folder website/informasi/ yang rapi serta mengompres ke AVIF. Lanjutkan?')
+                ->modalSubmitActionLabel('Ya, Sinkronisasi Sekarang')
+                ->action(function () {
+                    try {
+                        \Illuminate\Support\Facades\Artisan::call('website:migrate-images');
+                        $this->form->fill($this->getRecord()?->attributesToArray());
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Sinkronisasi Selesai')
+                            ->body('Seluruh gambar informasi dan attachment berhasil disinkronkan ke AVIF.')
+                            ->send();
+                    } catch (\Throwable $e) {
+                        \Filament\Notifications\Notification::make()
+                            ->danger()
+                            ->title('Sinkronisasi Gagal')
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                }),
+        ];
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
@@ -82,7 +114,11 @@ class ManageInformasi extends Page
                                                     fn(TemporaryUploadedFile $file): string => 'kejuruan_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(2048),
-                                            RichEditor::make('deskripsi_kejuruan')->label('Deskripsi / Detail Kejuruan')->columnSpanFull(),
+                                            RichEditor::make('deskripsi_kejuruan')
+                                                ->label('Deskripsi / Detail Kejuruan')
+                                                ->fileAttachmentsDisk('public')
+                                                ->fileAttachmentsDirectory('website/informasi/kejuruan/konten')
+                                                ->columnSpanFull(),
                                         ])->columns(2)->createItemButtonLabel('Tambah Kejuruan Baru'),
                                 ]),
 
@@ -102,7 +138,11 @@ class ManageInformasi extends Page
                                                     fn(TemporaryUploadedFile $file): string => 'fasilitas_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(3072),
-                                            RichEditor::make('deskripsi_fasilitas')->label('Keterangan Gedung / Sarana')->columnSpanFull(),
+                                            RichEditor::make('deskripsi_fasilitas')
+                                                ->label('Keterangan Gedung / Sarana')
+                                                ->fileAttachmentsDisk('public')
+                                                ->fileAttachmentsDirectory('website/informasi/fasilitas/konten')
+                                                ->columnSpanFull(),
                                         ])->columns(2)->createItemButtonLabel('Tambah Fasilitas Baru'),
                                 ]),
 
@@ -122,7 +162,11 @@ class ManageInformasi extends Page
                                                     fn(TemporaryUploadedFile $file): string => 'workshop_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(3072),
-                                            RichEditor::make('deskripsi_ruangan')->label('Detail Fasilitas Ruangan')->columnSpanFull(),
+                                            RichEditor::make('deskripsi_ruangan')
+                                                ->label('Detail Fasilitas Ruangan')
+                                                ->fileAttachmentsDisk('public')
+                                                ->fileAttachmentsDirectory('website/informasi/workshop/konten')
+                                                ->columnSpanFull(),
                                         ])->columns(2)->createItemButtonLabel('Tambah Ruang / Workshop Baru'),
                                 ]),
 
@@ -142,7 +186,11 @@ class ManageInformasi extends Page
                                                     fn(TemporaryUploadedFile $file): string => 'alumni_' . time() . '_' . bin2hex(random_bytes(4)) . '.avif'
                                                 )
                                                 ->maxSize(2048),
-                                            RichEditor::make('catatan_alumni')->label('Detail Informasi / Karir Alumni')->columnSpanFull(),
+                                            RichEditor::make('catatan_alumni')
+                                                ->label('Detail Informasi / Karir Alumni')
+                                                ->fileAttachmentsDisk('public')
+                                                ->fileAttachmentsDirectory('website/informasi/alumni/konten')
+                                                ->columnSpanFull(),
                                         ])->columns(2)->createItemButtonLabel('Tambah Catatan Alumni Baru'),
                                 ]),
 
@@ -154,7 +202,11 @@ class ManageInformasi extends Page
                                         ->schema([
                                             TextInput::make('nama_alumni')->label('Nama Lengkap Alumni'),
                                             TextInput::make('pekerjaan')->label('Bekerja di / Wirausaha'),
-                                            RichEditor::make('isi_testimoni')->label('Kalimat Testimoni')->columnSpanFull(),
+                                            RichEditor::make('isi_testimoni')
+                                                ->label('Kalimat Testimoni')
+                                                ->fileAttachmentsDisk('public')
+                                                ->fileAttachmentsDirectory('website/informasi/testimoni/konten')
+                                                ->columnSpanFull(),
                                             FileUpload::make('foto_alumni')
                                                 ->label('Foto Alumni')
                                                 ->disk('public')
@@ -189,6 +241,8 @@ class ManageInformasi extends Page
                                                 ->maxLength(255),
                                             RichEditor::make('bentuk_kerjasama')
                                                 ->label('Bentuk / Deskripsi Kerjasama')
+                                                ->fileAttachmentsDisk('public')
+                                                ->fileAttachmentsDirectory('website/informasi/kerjasama/konten')
                                                 ->columnSpanFull(),
                                         ])
                                         ->columns(2)
@@ -206,6 +260,8 @@ class ManageInformasi extends Page
                                                 ->maxLength(255),
                                             RichEditor::make('jawaban')
                                                 ->label('Jawaban / Penjelasan Lengkap')
+                                                ->fileAttachmentsDisk('public')
+                                                ->fileAttachmentsDirectory('website/informasi/faq/konten')
                                                 ->columnSpanFull(),
                                         ])
                                         ->columns(1)
