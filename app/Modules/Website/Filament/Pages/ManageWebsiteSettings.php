@@ -77,6 +77,9 @@ class ManageWebsiteSettings extends Page
                         $exitCode = \Illuminate\Support\Facades\Artisan::call('website:migrate-images');
                         $output   = \Illuminate\Support\Facades\Artisan::output();
 
+                        // Refresh state form agar gambar yang baru termigrasi langsung tampil
+                        $this->form->fill($this->getRecord()?->attributesToArray());
+
                         \Filament\Notifications\Notification::make()
                             ->success()
                             ->title('Sinkronisasi Selesai')

@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
  * Service untuk mengompresi dan mengkonversi gambar ke format AVIF
  * menggunakan ekstensi GD bawaan PHP (tanpa library tambahan).
  *
- * Membutuhkan: PHP >= 8.1 + GD dengan AVIF support (tersedia di PHP 8.1+).
+ * Mendukung transparansi penuh (alpha channel) untuk PNG, WebP, dan GIF.
  */
 class ImageCompressor
 {
@@ -31,10 +31,10 @@ class ImageCompressor
      * Kompres gambar di path absolut menjadi AVIF.
      *
      * @param  string  $absolutePath  Path fisik absolut file gambar
-     * @param  int     $quality       Kualitas AVIF (0–100, default 72)
+     * @param  int     $quality       Kualitas AVIF (0–100, default 75)
      * @return bool    true = berhasil dikonversi, false = dilewati / gagal
      */
-    public static function compress(string $absolutePath, int $quality = 72): bool
+    public static function compress(string $absolutePath, int $quality = 75): bool
     {
         if (! file_exists($absolutePath) || ! is_readable($absolutePath)) {
             return false;
@@ -47,26 +47,21 @@ class ImageCompressor
             return false;
         }
 
-        // Jika file sudah AVIF dan berukuran kecil, lewati
+        // Jika file sudah AVIF, tidak perlu dikonversi ulang
         if ($mime === 'image/avif') {
             return true;
         }
 
-        // Buat image resource dari GD
+        // Buat image resource dari GD dengan preservasi alpha channel penuh
         $image = self::createImageResource($absolutePath, $mime);
 
         if ($image === null) {
             return false;
         }
 
-        // Preserve transparansi untuk PNG
-        if ($mime === 'image/png') {
-            $bgCanvas = imagecreatetruecolor(imagesx($image), imagesy($image));
-            imagefill($bgCanvas, 0, 0, imagecolorallocate($bgCanvas, 255, 255, 255));
-            imagecopy($bgCanvas, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
-            imagedestroy($image);
-            $image = $bgCanvas;
-        }
+        // Pastikan transparansi tetap aktif dan disimpan ke hasil AVIF
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
 
         // Tulis langsung ke path yang sama (menimpa file lama)
         $result = imageavif($image, $absolutePath, $quality);
@@ -84,7 +79,7 @@ class ImageCompressor
      * @param  int     $quality
      * @return bool
      */
-    public static function compressPublic(string $relativePath, int $quality = 72): bool
+    public static function compressPublic(string $relativePath, int $quality = 75): bool
     {
         if (empty($relativePath)) {
             return false;
@@ -115,11 +110,11 @@ class ImageCompressor
     }
 
     /**
-     * Buat GD image resource berdasarkan MIME type.
+     * Buat GD image resource berdasarkan MIME type dengan penanganan transparansi yang benar.
      */
     private static function createImageResource(string $path, string $mime): ?\GdImage
     {
-        return match ($mime) {
+        $image = match ($mime) {
             'image/jpeg', 'image/jpg' => @imagecreatefromjpeg($path),
             'image/png'               => @imagecreatefrompng($path),
             'image/webp'              => @imagecreatefromwebp($path),
@@ -128,6 +123,14 @@ class ImageCompressor
             'image/avif'              => @imagecreatefromavif($path),
             default                   => null,
         };
+
+        if ($image) {
+            // Aktifkan alpha blending & save alpha untuk format yang mendukung transparansi
+            imagealphablending($image, false);
+            imagesavealpha($image, true);
+        }
+
+        return $image ?: null;
     }
 
     /**
@@ -137,7 +140,7 @@ class ImageCompressor
      * @param  int            $quality
      * @return array{compressed: int, skipped: int, failed: int}
      */
-    public static function batchCompressPublic(array $relativePaths, int $quality = 72): array
+    public static function batchCompressPublic(array $relativePaths, int $quality = 75): array
     {
         $stats = ['compressed' => 0, 'skipped' => 0, 'failed' => 0];
 
