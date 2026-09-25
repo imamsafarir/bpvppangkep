@@ -943,8 +943,7 @@
 
 
     {{-- ================= POPUP MODAL: HALAMAN FORM ASLI (EDIT / CREATE) ================= --}}
-    <div id="contentFrameModal" class="cal-modal-backdrop" style="display: none;"
-        onclick="if(event.target === this) closeContentPopup();">
+    <div id="contentFrameModal" class="cal-modal-backdrop" style="display: none;" wire:ignore>
         <div class="cal-modal-dialog">
             {{-- Header Modal --}}
             <div class="cal-modal-header">
@@ -961,8 +960,8 @@
                         style="font-size: 12px; padding: 6px 12px; text-decoration: none;">
                         ↗ Buka di Tab Baru
                     </a>
-                    <button type="button" onclick="closeContentPopup()" class="cal-btn-secondary"
-                        style="font-size: 12px; padding: 6px 14px; background-color: #fee2e2; color: #b91c1c; border-color: #fca5a5;">
+                    <button type="button" onclick="confirmCloseContentPopup()" class="cal-btn-secondary"
+                        style="font-size: 12px; padding: 6px 14px; background-color: #fee2e2; color: #b91c1c; border-color: #fca5a5; font-weight: 600;">
                         ✕ Tutup (Kembali ke Kalender)
                     </button>
                 </div>
@@ -991,8 +990,10 @@
     {{-- ================= JAVASCRIPT INITIALIZATION ================= --}}
     <script>
         var calendar = null;
+        window.isContentPopupOpen = false;
 
         function closeContentPopup() {
+            window.isContentPopupOpen = false;
             var modal = document.getElementById('contentFrameModal');
             var iframe = document.getElementById('contentIframe');
             if (modal) modal.style.display = 'none';
@@ -1008,8 +1009,18 @@
         }
         window.closeContentPopup = closeContentPopup;
 
-        // Listener pesan dari iframe anak saat disimpan atau dibatalkan
+        function confirmCloseContentPopup() {
+            closeContentPopup();
+        }
+        window.confirmCloseContentPopup = confirmCloseContentPopup;
+
+        // Listener pesan terverifikasi dari iframe anak saat disimpan atau dibatalkan
         window.addEventListener('message', function(event) {
+            var iframe = document.getElementById('contentIframe');
+            if (!iframe || !iframe.contentWindow || event.source !== iframe.contentWindow) {
+                return;
+            }
+
             var isSaved = (event.data === 'content-saved' || (event.data && event.data.type === 'content-saved'));
             var isClosed = (event.data === 'close-content-popup' || (event.data && event.data.type ===
                 'close-content-popup'));
@@ -1020,6 +1031,7 @@
         });
 
         function openContentPopup(url, title, badge) {
+            window.isContentPopupOpen = true;
             var modal = document.getElementById('contentFrameModal');
             var iframe = document.getElementById('contentIframe');
             var titleEl = document.getElementById('frameModalTitle');
@@ -1039,24 +1051,16 @@
                 try {
                     var iframeWin = iframe.contentWindow;
                     var iframeDoc = iframe.contentDocument || iframeWin.document;
-                    var currentPath = iframeWin.location.pathname;
+                    if (!iframeWin || !iframeWin.location) return;
 
-                    // Abaikan jika blank atau belum terisi
+                    var currentPath = iframeWin.location.pathname || '';
+
+                    // Abaikan jika blank
                     if (!currentPath || currentPath === 'blank' || iframeWin.location.href === 'about:blank') {
                         return;
                     }
 
-                    // Hanya tutup otomatis jika pengguna sudah submit form dan diredirect ke calendar-page atau admin/contents
-                    if (hasInitialLoaded) {
-                        if (currentPath.includes('calendar-page') || currentPath === '/admin/contents' ||
-                            currentPath === '/admin/contents/') {
-                            closeContentPopup();
-                            return;
-                        }
-                    } else {
-                        hasInitialLoaded = true;
-                    }
-
+                    // Terapkan penyesuaian style agar sidebar & navbar Filament di iframe tersembunyi
                     if (iframeDoc && iframeDoc.head) {
                         var style = iframeDoc.createElement('style');
                         style.innerHTML = `
@@ -1070,8 +1074,16 @@
                         `;
                         iframeDoc.head.appendChild(style);
                     }
+
+                    // Hanya tutup otomatis jika setelah submit user diarahkan kembali ke kalender
+                    if (hasInitialLoaded && currentPath.endsWith('/calendar-page')) {
+                        closeContentPopup();
+                    } else if (!currentPath.endsWith('/calendar-page')) {
+                        hasInitialLoaded = true;
+                    }
                 } catch (e) {
-                    console.log('Iframe styling notice:', e);
+                    // Browser security cross-origin notice (jika beda host)
+                    console.log('Iframe notice:', e);
                 }
             };
 
@@ -1232,11 +1244,11 @@
                             ${subteamHtml}
 
                             ${(platformsHtml || chatBadgeHtml) ? `
-                                        <div class="cal-card-footer">
-                                            ${platformsHtml ? `<div class="cal-platforms-row">${platformsHtml}</div>` : '<div></div>'}
-                                            ${chatBadgeHtml ? `<div class="cal-bottom-chat">${chatBadgeHtml}</div>` : ''}
-                                        </div>
-                                    ` : ''}
+                                            <div class="cal-card-footer">
+                                                ${platformsHtml ? `<div class="cal-platforms-row">${platformsHtml}</div>` : '<div></div>'}
+                                                ${chatBadgeHtml ? `<div class="cal-bottom-chat">${chatBadgeHtml}</div>` : ''}
+                                            </div>
+                                        ` : ''}
 
                             ${deadlineMarkerHtml}
                         </div>
@@ -1258,12 +1270,15 @@
                 calendar.updateSize();
             });
 
-            // Re-render saat ada event refresh dari Livewire
+            // Re-render saat ada event refresh dari Livewire (hanya jika form modal tidak sedang terbuka)
             Livewire.on('calendar-refresh', () => {
-                @this.getCalendarEvents().then(events => {
-                    calendar.removeAllEvents();
-                    calendar.addEventSource(events);
-                });
+                if (window.isContentPopupOpen) return;
+                if (calendar) {
+                    @this.getCalendarEvents().then(events => {
+                        calendar.removeAllEvents();
+                        calendar.addEventSource(events);
+                    });
+                }
             });
         });
     </script>
