@@ -29,6 +29,7 @@ class ImageCompressor
 
     /**
      * Kompres gambar di path absolut menjadi AVIF.
+     * Menimpa file di path yang sama.
      *
      * @param  string  $absolutePath  Path fisik absolut file gambar
      * @param  int     $quality       Kualitas AVIF (0–100, default 75)
@@ -40,30 +41,25 @@ class ImageCompressor
             return false;
         }
 
-        // Deteksi mime type secara andal
         $mime = self::detectMime($absolutePath);
 
         if (! in_array($mime, self::SUPPORTED_MIMES, true)) {
             return false;
         }
 
-        // Jika file sudah AVIF, tidak perlu dikonversi ulang
         if ($mime === 'image/avif') {
             return true;
         }
 
-        // Buat image resource dari GD dengan preservasi alpha channel penuh
         $image = self::createImageResource($absolutePath, $mime);
 
         if ($image === null) {
             return false;
         }
 
-        // Pastikan transparansi tetap aktif dan disimpan ke hasil AVIF
         imagealphablending($image, false);
         imagesavealpha($image, true);
 
-        // Tulis langsung ke path yang sama (menimpa file lama)
         $result = imageavif($image, $absolutePath, $quality);
 
         imagedestroy($image);
@@ -72,10 +68,84 @@ class ImageCompressor
     }
 
     /**
-     * Kompres gambar di storage publik berdasarkan path relatif
-     * (relatif terhadap disk 'public').
+     * Kompres dan ubah nama file ke ekstensi .avif.
+     * Jika file fisik belum berakhiran .avif, konversi ke file baru .avif dan hapus file lama.
+     * Mengembalikan relative path baru (misal: 'website/berita/sampul/foto.avif') atau path lama jika gagal.
      *
-     * @param  string  $relativePath  Path relatif di disk public (misal: 'website/berita/sampul/foto.avif')
+     * @param  string  $relativePath  Path relatif di disk public
+     * @param  int     $quality
+     * @return string  Relative path hasil (bisa berakhiran .avif)
+     */
+    public static function convertToAvifPublic(string $relativePath, int $quality = 75): string
+    {
+        if (empty($relativePath)) {
+            return $relativePath;
+        }
+
+        $relativePath = str_replace('\\', '/', $relativePath);
+
+        // Abaikan file non-gambar
+        $ext = strtolower(pathinfo($relativePath, PATHINFO_EXTENSION));
+        if (in_array($ext, ['ico', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'rar', 'mp4', 'mov', 'webm'])) {
+            return $relativePath;
+        }
+
+        $disk = Storage::disk('public');
+        if (! $disk->exists($relativePath)) {
+            return $relativePath;
+        }
+
+        $absolutePath = $disk->path($relativePath);
+        $mime = self::detectMime($absolutePath);
+
+        if (! in_array($mime, self::SUPPORTED_MIMES, true)) {
+            return $relativePath;
+        }
+
+        // Tentukan target path yang berakhiran .avif
+        $dir = pathinfo($relativePath, PATHINFO_DIRNAME);
+        $filenameWithoutExt = pathinfo($relativePath, PATHINFO_FILENAME);
+        $newRelativePath = ($dir === '.' ? '' : $dir . '/') . $filenameWithoutExt . '.avif';
+        $newAbsolutePath = $disk->path($newRelativePath);
+
+        // Jika file asli sudah .avif dan kontennya memang avif
+        if ($ext === 'avif' && $mime === 'image/avif') {
+            return $relativePath;
+        }
+
+        $image = self::createImageResource($absolutePath, $mime);
+        if ($image === null) {
+            return $relativePath;
+        }
+
+        imagealphablending($image, false);
+        imagesavealpha($image, true);
+
+        // Pastikan direktori tujuan ada
+        $targetDir = dirname($newAbsolutePath);
+        if (! is_dir($targetDir)) {
+            mkdir($targetDir, 0755, true);
+        }
+
+        $success = imageavif($image, $newAbsolutePath, $quality);
+        imagedestroy($image);
+
+        if ($success) {
+            // Hapus file lama jika nama file berbeda
+            if ($newRelativePath !== $relativePath && $disk->exists($relativePath)) {
+                $disk->delete($relativePath);
+            }
+
+            return $newRelativePath;
+        }
+
+        return $relativePath;
+    }
+
+    /**
+     * Kompres gambar di storage publik berdasarkan path relatif.
+     *
+     * @param  string  $relativePath  Path relatif di disk public
      * @param  int     $quality
      * @return bool
      */
@@ -103,14 +173,13 @@ class ImageCompressor
             return $mime ?: '';
         }
 
-        // Fallback: getimagesize
         $info = @getimagesize($path);
 
         return $info['mime'] ?? '';
     }
 
     /**
-     * Buat GD image resource berdasarkan MIME type dengan penanganan transparansi yang benar.
+     * Buat GD image resource berdasarkan MIME type dengan penanganan transparansi.
      */
     private static function createImageResource(string $path, string $mime): ?\GdImage
     {
@@ -125,7 +194,6 @@ class ImageCompressor
         };
 
         if ($image) {
-            // Aktifkan alpha blending & save alpha untuk format yang mendukung transparansi
             imagealphablending($image, false);
             imagesavealpha($image, true);
         }
@@ -135,10 +203,6 @@ class ImageCompressor
 
     /**
      * Batch compress: kompres beberapa file sekaligus (array path relatif).
-     *
-     * @param  array<string>  $relativePaths
-     * @param  int            $quality
-     * @return array{compressed: int, skipped: int, failed: int}
      */
     public static function batchCompressPublic(array $relativePaths, int $quality = 75): array
     {

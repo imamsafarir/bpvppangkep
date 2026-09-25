@@ -49,6 +49,38 @@ class GaleriPage extends Page
         );
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            \Filament\Actions\Action::make('migrate_media')
+                ->label('🔄 Sinkronisasi Folder Media')
+                ->color('warning')
+                ->icon('heroicon-o-arrow-path')
+                ->visible(fn() => Auth::user()?->isAdmin() ?? false)
+                ->requiresConfirmation()
+                ->modalHeading('Sinkronisasi Folder Media TimSosmed')
+                ->modalDescription('Proses ini akan memastikan seluruh file bahan & hasil editing tersimpan rapi di folder timsosmed/content/ dan seluruh preview AVIF terbuat dengan baik. Lanjutkan?')
+                ->modalSubmitActionLabel('Ya, Sinkronisasi Sekarang')
+                ->action(function () {
+                    try {
+                        \Illuminate\Support\Facades\Artisan::call('timsosmed:migrate-media');
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Sinkronisasi Media Selesai')
+                            ->body('Seluruh media TimSosmed berhasil diselaraskan dan preview AVIF telah siap.')
+                            ->send();
+                    } catch (\Throwable $e) {
+                        \Filament\Notifications\Notification::make()
+                            ->danger()
+                            ->title('Sinkronisasi Gagal')
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                }),
+        ];
+    }
+
     /**
      * Ambil semua media dari koleksi bahan dan editing,
      * dengan filter dan pagination.

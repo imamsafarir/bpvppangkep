@@ -20,13 +20,14 @@ use Illuminate\Support\Facades\Storage;
  * Tugas:
  * 1. Scan semua record di database yang menyimpan path gambar/file lama (tanpa prefix "website/")
  * 2. Pindahkan file fisiknya ke path baru (dengan prefix "website/")
- * 3. Compress ke AVIF jika berupa gambar
- * 4. Update path di database agar sesuai lokasi baru
+ * 3. Compress dan konversi gambar ke .avif sesungguhnya (termasuk update nama ekstensi)
+ * 4. Pindahkan gambar attachment di dalam konten RichEditor (berita, profil sambutan, dll) dan perbarui link HTML di database
+ * 5. Update seluruh path di database agar akurat dengan storage baru
  */
 class MigrateWebsiteImages extends Command
 {
     protected $signature   = 'website:migrate-images';
-    protected $description = 'Migrasi gambar dan dokumen lama ke folder website/ dan kompres gambar ke AVIF';
+    protected $description = 'Migrasi gambar dan dokumen lama ke folder website/ dan konversi gambar ke AVIF';
 
     /** Mapping lama → baru untuk direktori sederhana */
     private const DIR_MAP = [
@@ -56,14 +57,14 @@ class MigrateWebsiteImages extends Command
         'jdih/dokumen'                  => 'website/jdih/dokumen',
     ];
 
-    private int $moved     = 0;
-    private int $compressed = 0;
-    private int $skipped   = 0;
-    private int $errors    = 0;
+    private int $moved      = 0;
+    private int $converted  = 0;
+    private int $skipped    = 0;
+    private int $errors     = 0;
 
     public function handle(): int
     {
-        $this->info('🚀 Memulai migrasi gambar & dokumen Website ke folder website/ ...');
+        $this->info('🚀 Memulai sinkronisasi seluruh media & file Website ke folder website/ ...');
 
         $this->migrateBeritaGaleri();
         $this->migrateProfil();
@@ -74,10 +75,10 @@ class MigrateWebsiteImages extends Command
         $this->migrateJdih();
 
         $this->newLine();
-        $this->info("✅ Selesai!");
+        $this->info('✅ Sinkronisasi Website Selesai!');
         $this->table(
-            ['Dipindahkan', 'Dikompres (AVIF)', 'Dilewati', 'Error'],
-            [[$this->moved, $this->compressed, $this->skipped, $this->errors]]
+            ['Dipindahkan / Disesuaikan', 'Dikonversi ke AVIF', 'Dilewati (Sudah Siap)', 'File Hilang / Error'],
+            [[$this->moved, $this->converted, $this->skipped, $this->errors]]
         );
 
         return self::SUCCESS;
@@ -89,26 +90,43 @@ class MigrateWebsiteImages extends Command
 
     private function migrateBeritaGaleri(): void
     {
-        $this->line('📰 Memproses Berita & Galeri...');
+        $this->line('📰 Memproses Berita & Galeri (termasuk isi konten & attachment)...');
 
         BeritaDanGaleri::chunk(50, function ($rows) {
             foreach ($rows as $row) {
-                $fotos = (array) ($row->file_foto ?? []);
                 $changed = false;
+                $updateData = [];
+
+                // 1. file_foto (sampul berita atau kumpulan foto galeri)
+                $fotos = (array) ($row->file_foto ?? []);
                 $newFotos = [];
 
                 foreach ($fotos as $path) {
-                    $newPath = $this->migrateFile($path, true);
-                    $newFotos[] = $newPath ?? $path;
-                    if ($newPath !== null) {
+                    $newPath = $this->migrateAndConvertFile($path, true);
+                    $newFotos[] = $newPath;
+                    if ($newPath !== $path) {
                         $changed = true;
                     }
                 }
 
-                if ($changed) {
+                if ($newFotos !== $fotos) {
+                    $updateData['file_foto'] = json_encode(array_values($newFotos));
+                    $changed = true;
+                }
+
+                // 2. Attachment di dalam konten HTML berita (rich editor)
+                if (! empty($row->konten_berita)) {
+                    $newHtml = $this->migrateHtmlAttachments($row->konten_berita, 'website/berita/konten');
+                    if ($newHtml !== $row->konten_berita) {
+                        $updateData['konten_berita'] = $newHtml;
+                        $changed = true;
+                    }
+                }
+
+                if ($changed && ! empty($updateData)) {
                     DB::table('berita_dan_galeris')
                         ->where('id', $row->id)
-                        ->update(['file_foto' => json_encode(array_values($newFotos))]);
+                        ->update($updateData);
                 }
             }
         });
@@ -120,7 +138,7 @@ class MigrateWebsiteImages extends Command
 
     private function migrateProfil(): void
     {
-        $this->line('👤 Memproses Profil...');
+        $this->line('👤 Memproses Profil Balai & Sambutan...');
 
         $profil = Profil::first();
         if (! $profil) {
@@ -131,17 +149,26 @@ class MigrateWebsiteImages extends Command
         $data    = [];
 
         // chief photo
-        $newPath = $this->migrateFile($profil->chief_photo_path, true);
-        if ($newPath !== null) {
-            $data['chief_photo_path'] = $newPath;
+        $newChief = $this->migrateAndConvertFile($profil->chief_photo_path, true);
+        if ($newChief !== $profil->chief_photo_path) {
+            $data['chief_photo_path'] = $newChief;
             $changed = true;
         }
 
         // struktur organisasi
-        $newPath = $this->migrateFile($profil->struktur_organisasi, true);
-        if ($newPath !== null) {
-            $data['struktur_organisasi'] = $newPath;
+        $newStruktur = $this->migrateAndConvertFile($profil->struktur_organisasi, true);
+        if ($newStruktur !== $profil->struktur_organisasi) {
+            $data['struktur_organisasi'] = $newStruktur;
             $changed = true;
+        }
+
+        // sambutan kepala balai (HTML content)
+        if (! empty($profil->sambutan_kepala)) {
+            $newSambutan = $this->migrateHtmlAttachments($profil->sambutan_kepala, 'website/profil/sambutan');
+            if ($newSambutan !== $profil->sambutan_kepala) {
+                $data['sambutan_kepala'] = $newSambutan;
+                $changed = true;
+            }
         }
 
         // pejabat struktural (JSON repeater)
@@ -150,27 +177,25 @@ class MigrateWebsiteImages extends Command
         $pejChanged = false;
 
         foreach ($pejabat as $item) {
-            $newPath = $this->migrateFile($item['foto'] ?? null, true);
-            if ($newPath !== null) {
-                $item['foto'] = $newPath;
-                $pejChanged   = true;
+            if (! empty($item['foto'])) {
+                $newFoto = $this->migrateAndConvertFile($item['foto'], true);
+                if ($newFoto !== $item['foto']) {
+                    $item['foto'] = $newFoto;
+                    $pejChanged   = true;
+                }
             }
             $newPejabat[] = $item;
         }
 
         if ($pejChanged) {
-            $data['pejabat_struktural'] = $newPejabat;
+            $data['pejabat_struktural'] = json_encode(array_values($newPejabat));
             $changed = true;
         }
 
         if ($changed) {
-            $dbData = [];
-            foreach ($data as $key => $value) {
-                $dbData[$key] = is_array($value) ? json_encode($value) : $value;
-            }
             DB::table('profils')
                 ->where('id', $profil->id)
-                ->update($dbData);
+                ->update($data);
         }
     }
 
@@ -180,7 +205,7 @@ class MigrateWebsiteImages extends Command
 
     private function migrateInformasi(): void
     {
-        $this->line('📚 Memproses Informasi...');
+        $this->line('📚 Memproses Informasi (Kejuruan, Fasilitas, Workshop, Testimoni)...');
 
         $info = Informasi::first();
         if (! $info) {
@@ -200,33 +225,31 @@ class MigrateWebsiteImages extends Command
         $changed = false;
 
         foreach ($repeaterMap as $field => $imageKey) {
-            $items      = (array) ($info->$field ?? []);
-            $newItems   = [];
+            $items        = (array) ($info->$field ?? []);
+            $newItems     = [];
             $fieldChanged = false;
 
             foreach ($items as $item) {
-                $newPath = $this->migrateFile($item[$imageKey] ?? null, true);
-                if ($newPath !== null) {
-                    $item[$imageKey] = $newPath;
-                    $fieldChanged    = true;
+                if (! empty($item[$imageKey])) {
+                    $newPath = $this->migrateAndConvertFile($item[$imageKey], true);
+                    if ($newPath !== $item[$imageKey]) {
+                        $item[$imageKey] = $newPath;
+                        $fieldChanged    = true;
+                    }
                 }
                 $newItems[] = $item;
             }
 
             if ($fieldChanged) {
-                $data[$field] = $newItems;
+                $data[$field] = json_encode(array_values($newItems));
                 $changed      = true;
             }
         }
 
         if ($changed) {
-            $dbData = [];
-            foreach ($data as $key => $value) {
-                $dbData[$key] = is_array($value) ? json_encode(array_values($value)) : $value;
-            }
             DB::table('informasis')
                 ->where('id', $info->id)
-                ->update($dbData);
+                ->update($data);
         }
     }
 
@@ -246,15 +269,17 @@ class MigrateWebsiteImages extends Command
         $dbUpdates = [];
 
         // 1. Alur pelayanan (foto/gambar)
-        $alur    = (array) ($pelayanan->alur_pelayanan ?? []);
+        $alur = (array) ($pelayanan->alur_pelayanan ?? []);
         $newAlur = [];
         $alurChanged = false;
 
         foreach ($alur as $item) {
-            $newPath = $this->migrateFile($item['foto_alur'] ?? null, true);
-            if ($newPath !== null) {
-                $item['foto_alur'] = $newPath;
-                $alurChanged       = true;
+            if (! empty($item['foto_alur'])) {
+                $newPath = $this->migrateAndConvertFile($item['foto_alur'], true);
+                if ($newPath !== $item['foto_alur']) {
+                    $item['foto_alur'] = $newPath;
+                    $alurChanged       = true;
+                }
             }
             $newAlur[] = $item;
         }
@@ -264,15 +289,17 @@ class MigrateWebsiteImages extends Command
         }
 
         // 2. Maklumat pelayanan (dokumen/gambar)
-        $maklumat    = (array) ($pelayanan->maklumat_pelayanan ?? []);
+        $maklumat = (array) ($pelayanan->maklumat_pelayanan ?? []);
         $newMaklumat = [];
         $maklumatChanged = false;
 
         foreach ($maklumat as $item) {
-            $newPath = $this->migrateFile($item['file_maklumat'] ?? null, true);
-            if ($newPath !== null) {
-                $item['file_maklumat'] = $newPath;
-                $maklumatChanged       = true;
+            if (! empty($item['file_maklumat'])) {
+                $newPath = $this->migrateAndConvertFile($item['file_maklumat'], false);
+                if ($newPath !== $item['file_maklumat']) {
+                    $item['file_maklumat'] = $newPath;
+                    $maklumatChanged       = true;
+                }
             }
             $newMaklumat[] = $item;
         }
@@ -282,15 +309,17 @@ class MigrateWebsiteImages extends Command
         }
 
         // 3. Standar pelayanan (dokumen/gambar)
-        $standar    = (array) ($pelayanan->standar_pelayanan ?? []);
+        $standar = (array) ($pelayanan->standar_pelayanan ?? []);
         $newStandar = [];
         $standarChanged = false;
 
         foreach ($standar as $item) {
-            $newPath = $this->migrateFile($item['file_standar'] ?? null, true);
-            if ($newPath !== null) {
-                $item['file_standar'] = $newPath;
-                $standarChanged       = true;
+            if (! empty($item['file_standar'])) {
+                $newPath = $this->migrateAndConvertFile($item['file_standar'], false);
+                if ($newPath !== $item['file_standar']) {
+                    $item['file_standar'] = $newPath;
+                    $standarChanged       = true;
+                }
             }
             $newStandar[] = $item;
         }
@@ -312,7 +341,7 @@ class MigrateWebsiteImages extends Command
 
     private function migrateWebsiteSettings(): void
     {
-        $this->line('⚙️ Memproses Pengaturan Website...');
+        $this->line('⚙️ Memproses Pengaturan Website (Logo, Favicon, Sliders, Popup)...');
 
         $setting = WebsiteSetting::first();
         if (! $setting) {
@@ -323,10 +352,13 @@ class MigrateWebsiteImages extends Command
         $changed = false;
 
         foreach (['logo_path', 'favicon_path', 'popup_image_path'] as $field) {
-            $newPath = $this->migrateFile($setting->$field, $field !== 'favicon_path');
-            if ($newPath !== null) {
-                $data[$field] = $newPath;
-                $changed      = true;
+            if (! empty($setting->$field)) {
+                $shouldConvert = ($field !== 'favicon_path');
+                $newPath = $this->migrateAndConvertFile($setting->$field, $shouldConvert);
+                if ($newPath !== $setting->$field) {
+                    $data[$field] = $newPath;
+                    $changed      = true;
+                }
             }
         }
 
@@ -336,26 +368,22 @@ class MigrateWebsiteImages extends Command
         $sChanged   = false;
 
         foreach ($sliders as $slider) {
-            $newPath = $this->migrateFile($slider, true);
-            $newSliders[] = $newPath ?? $slider;
-            if ($newPath !== null) {
+            $newPath = $this->migrateAndConvertFile($slider, true);
+            $newSliders[] = $newPath;
+            if ($newPath !== $slider) {
                 $sChanged = true;
             }
         }
 
         if ($sChanged) {
-            $data['sliders'] = $newSliders;
+            $data['sliders'] = json_encode(array_values($newSliders));
             $changed         = true;
         }
 
         if ($changed) {
-            $dbData = [];
-            foreach ($data as $key => $value) {
-                $dbData[$key] = is_array($value) ? json_encode($value) : $value;
-            }
             DB::table('website_settings')
                 ->where('id', $setting->id)
-                ->update($dbData);
+                ->update($data);
         }
     }
 
@@ -373,8 +401,8 @@ class MigrateWebsiteImages extends Command
                     continue;
                 }
 
-                $newPath = $this->migrateFile($row->file_path, false);
-                if ($newPath !== null) {
+                $newPath = $this->migrateAndConvertFile($row->file_path, false);
+                if ($newPath !== $row->file_path) {
                     DB::table('informasi_publiks')
                         ->where('id', $row->id)
                         ->update(['file_path' => $newPath]);
@@ -397,8 +425,8 @@ class MigrateWebsiteImages extends Command
                     continue;
                 }
 
-                $newPath = $this->migrateFile($row->file_path, false);
-                if ($newPath !== null) {
+                $newPath = $this->migrateAndConvertFile($row->file_path, false);
+                if ($newPath !== $row->file_path) {
                     DB::table('jdihs')
                         ->where('id', $row->id)
                         ->update(['file_path' => $newPath]);
@@ -412,97 +440,117 @@ class MigrateWebsiteImages extends Command
     // ──────────────────────────────────────────────
 
     /**
-     * Pindahkan satu file dari path lama ke path baru (berdasarkan DIR_MAP),
-     * lalu compress ke AVIF jika berupa gambar.
+     * Memindahkan file ke folder website/ bila belum di sana,
+     * lalu mengonversinya ke AVIF (jika format gambar dan $shouldConvert = true).
      *
-     * @param  string|null  $relativePath   Path relatif di disk 'public'
-     * @param  bool         $shouldCompress Kompres ke AVIF jika true
-     * @return string|null  Path baru jika berhasil dipindahkan, null jika tidak ada perubahan
+     * @param  string|null  $relativePath
+     * @param  bool         $shouldConvert
+     * @return string|null  Relative path akhir (bisa berganti nama jadi .avif)
      */
-    private function migrateFile(?string $relativePath, bool $shouldCompress = true): ?string
+    private function migrateAndConvertFile(?string $relativePath, bool $shouldConvert = true): ?string
     {
         if (empty($relativePath)) {
             $this->skipped++;
             return null;
         }
 
-        // Normalisasi backslash jika ada
-        $relativePath = str_replace('\\', '/', $relativePath);
+        $disk = Storage::disk('public');
+        $cleanPath = str_replace('\\', '/', $relativePath);
 
-        // Jika sudah di prefix website/ atau timsosmed/, tidak perlu dipindah
-        if (str_starts_with($relativePath, 'website/') || str_starts_with($relativePath, 'timsosmed/')) {
-            if ($shouldCompress) {
-                $this->compressFile($relativePath);
-            }
-            $this->skipped++;
-            return null;
-        }
-
-        // Tentukan prefix folder baru berdasarkan DIR_MAP
-        $newRelativePath = null;
-        foreach (self::DIR_MAP as $oldDir => $newDir) {
-            if (str_starts_with($relativePath, $oldDir . '/')) {
-                $subPath         = substr($relativePath, strlen($oldDir . '/'));
-                $newRelativePath = $newDir . '/' . $subPath;
-                break;
-            }
-        }
-
-        if ($newRelativePath === null) {
-            // Default fallback: taruh di bawah website/
-            $newRelativePath = 'website/' . ltrim($relativePath, '/');
-        }
-
-        // Cek file sumber ada di disk
-        if (! Storage::disk('public')->exists($relativePath)) {
-            // Cek apakah file ternyata sudah berada di path baru
-            if (Storage::disk('public')->exists($newRelativePath)) {
-                if ($shouldCompress) {
-                    $this->compressFile($newRelativePath);
+        // Tentukan path tujuan di dalam folder website/
+        $targetPath = $cleanPath;
+        if (! str_starts_with($cleanPath, 'website/') && ! str_starts_with($cleanPath, 'timsosmed/')) {
+            $mapped = false;
+            foreach (self::DIR_MAP as $oldDir => $newDir) {
+                if (str_starts_with($cleanPath, $oldDir . '/')) {
+                    $subPath    = substr($cleanPath, strlen($oldDir . '/'));
+                    $targetPath = $newDir . '/' . $subPath;
+                    $mapped     = true;
+                    break;
                 }
+            }
+            if (! $mapped) {
+                $targetPath = 'website/' . ltrim($cleanPath, '/');
+            }
+        }
+
+        // Jika file lama belum ada di targetPath tetapi ada di cleanPath, pindahkan
+        if ($targetPath !== $cleanPath && $disk->exists($cleanPath)) {
+            $targetDir = dirname($targetPath);
+            if (! $disk->directoryExists($targetDir)) {
+                $disk->makeDirectory($targetDir);
+            }
+            $disk->put($targetPath, $disk->get($cleanPath));
+            $disk->delete($cleanPath);
+            $this->moved++;
+            $this->line("  ✓ Pindah: {$cleanPath} → {$targetPath}");
+        } elseif (! $disk->exists($targetPath)) {
+            // Cek kemungkinan file sudah berakhiran .avif
+            $avifGuess = pathinfo($targetPath, PATHINFO_DIRNAME) . '/' . pathinfo($targetPath, PATHINFO_FILENAME) . '.avif';
+            if ($disk->exists($avifGuess)) {
                 $this->skipped++;
-                return $newRelativePath;
+                return $avifGuess;
             }
 
-            $this->warn("  ⚠ File tidak ditemukan: {$relativePath}");
+            $this->warn("  ⚠ File tidak ditemukan di storage: {$cleanPath}");
             $this->errors++;
-            return null;
+            return $cleanPath;
         }
 
-        // Pastikan direktori tujuan ada
-        $targetDir = dirname($newRelativePath);
-        if (! Storage::disk('public')->directoryExists($targetDir)) {
-            Storage::disk('public')->makeDirectory($targetDir);
+        // Sekarang file sudah berada di $targetPath. Jika gambar & ingin dikonversi ke AVIF:
+        $ext = strtolower(pathinfo($targetPath, PATHINFO_EXTENSION));
+        $skipConversion = in_array($ext, ['ico', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'zip', 'rar', 'mp4', 'mov', 'webm']);
+
+        if ($shouldConvert && ! $skipConversion) {
+            $finalPath = ImageCompressor::convertToAvifPublic($targetPath, 75);
+            if ($finalPath !== $targetPath) {
+                $this->converted++;
+                $this->line("  ✨ Konversi AVIF: {$targetPath} → {$finalPath}");
+                return $finalPath;
+            } elseif ($ext === 'avif') {
+                $this->skipped++;
+                return $targetPath;
+            }
         }
 
-        // Salin file ke lokasi baru
-        $contents = Storage::disk('public')->get($relativePath);
-        Storage::disk('public')->put($newRelativePath, $contents);
-
-        // Hapus file lama setelah berhasil disalin
-        Storage::disk('public')->delete($relativePath);
-
-        $this->moved++;
-        $this->line("  ✓ Pindah: {$relativePath} → {$newRelativePath}");
-
-        // Compress ke AVIF jika berupa gambar
-        if ($shouldCompress) {
-            $this->compressFile($newRelativePath);
-        }
-
-        return $newRelativePath;
+        return $targetPath;
     }
 
-    private function compressFile(string $relativePath): void
+    /**
+     * Memindai tag <img> / link di dalam konten RichEditor HTML,
+     * memindahkan filenya ke folder target website/ jika masih di folder lama,
+     * dan mengonversi gambar ke AVIF sekaligus memperbarui URL di teks HTML.
+     */
+    private function migrateHtmlAttachments(string $html, string $targetFolder): string
     {
-        $ext = strtolower(pathinfo($relativePath, PATHINFO_EXTENSION));
-        if ($ext === 'ico' || $ext === 'pdf' || $ext === 'avif' || $ext === 'doc' || $ext === 'docx') {
-            return;
-        }
+        $disk = Storage::disk('public');
 
-        $ok = ImageCompressor::compressPublic($relativePath);
-        if ($ok) {
-            $this->compressed++;
-        }
+        return preg_replace_callback('/(src|href)=["\']([^"\']+)["\']/', function ($matches) use ($disk, $targetFolder) {
+            $attr = $matches[1];
+            $url  = $matches[2];
+
+            // Hanya proses URL storage lokal
+            $parsed = parse_url($url, PHP_URL_PATH);
+            if (! $parsed || ! str_contains($parsed, '/storage/')) {
+                return $matches[0];
+            }
+
+            // Ambil relative path setelah /storage/
+            $relPath = substr($parsed, strpos($parsed, '/storage/') + 9);
+            $relPath = ltrim(str_replace('\\', '/', $relPath), '/');
+
+            if (empty($relPath)) {
+                return $matches[0];
+            }
+
+            // Jalankan migrasi dan konversi
+            $newRelPath = $this->migrateAndConvertFile($relPath, true);
+            if ($newRelPath && $newRelPath !== $relPath) {
+                $newUrl = asset('storage/' . $newRelPath);
+                return "{$attr}=\"{$newUrl}\"";
+            }
+
+            return $matches[0];
+        }, $html);
     }
 }

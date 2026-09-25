@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Services\ImageCompressor;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -10,24 +11,25 @@ use Illuminate\Support\Facades\Storage;
  * Artisan command: php artisan timsosmed:migrate-media
  *
  * Tugas:
- * 1. Scan semua record di tabel 'media' yang model_type = Content dan path lama (content/{id}/...)
- * 2. Pindahkan file fisiknya ke timsosmed/content/{id}/...
- * 3. Update kolom 'custom_properties' dan path terkait di tabel media
+ * 1. Scan semua record di tabel 'media' yang model_type = Content
+ * 2. Pindahkan file fisik asli dari content/{id}/... ke timsosmed/content/{id}/...
+ * 3. Pindahkan file conversion preview (avif/thumb) ke folder baru
+ * 4. Regenerasi / pastikan preview AVIF tersedia untuk semua media gambar
  */
 class MigrateTimSosmedMedia extends Command
 {
     protected $signature   = 'timsosmed:migrate-media';
-    protected $description = 'Migrasi file media TimSosmed dari content/ ke timsosmed/content/';
+    protected $description = 'Migrasi file media TimSosmed ke timsosmed/content/ dan pastikan preview AVIF tersedia';
 
     private int $moved   = 0;
+    private int $converted = 0;
     private int $skipped = 0;
     private int $errors  = 0;
 
     public function handle(): int
     {
-        $this->info('🚀 Memulai migrasi media TimSosmed ke folder timsosmed/content/ ...');
+        $this->info('🚀 Memulai sinkronisasi seluruh media TimSosmed ke folder timsosmed/content/ ...');
 
-        // Ambil semua media milik Content yang masih di path lama
         $mediaRows = DB::table('media')
             ->where('model_type', 'App\\Modules\\TimSosmed\\Models\\Content')
             ->get();
@@ -48,10 +50,10 @@ class MigrateTimSosmedMedia extends Command
 
         $bar->finish();
         $this->newLine(2);
-        $this->info("✅ Selesai!");
+        $this->info('✅ Sinkronisasi Media TimSosmed Selesai!');
         $this->table(
-            ['Dipindahkan', 'Dilewati', 'Error'],
-            [[$this->moved, $this->skipped, $this->errors]]
+            ['Dipindahkan', 'Preview AVIF Dibuat', 'Dilewati', 'Error'],
+            [[$this->moved, $this->converted, $this->skipped, $this->errors]]
         );
 
         return self::SUCCESS;
@@ -61,73 +63,77 @@ class MigrateTimSosmedMedia extends Command
     {
         $id         = $media->model_id;
         $collection = $media->collection_name;
-        $uuid       = $media->uuid;
         $fileName   = $media->file_name;
+        $disk       = Storage::disk('public');
 
-        // Path lama (sebelum prefix timsosmed/)
         $oldPath    = "content/{$id}/{$collection}/{$fileName}";
-        // Path baru
         $newPath    = "timsosmed/content/{$id}/{$collection}/{$fileName}";
 
-        // Cek apakah sudah di lokasi baru
-        if (Storage::disk('public')->exists($newPath)) {
-            $this->skipped++;
-            // Hapus file lama jika masih ada
-            if (Storage::disk('public')->exists($oldPath)) {
-                Storage::disk('public')->delete($oldPath);
+        // 1. Pindahkan file utama jika masih di lokasi lama
+        if ($disk->exists($oldPath) && ! $disk->exists($newPath)) {
+            $newDir = dirname($newPath);
+            if (! $disk->directoryExists($newDir)) {
+                $disk->makeDirectory($newDir);
             }
-            return;
-        }
-
-        // Cek file lama ada
-        if (! Storage::disk('public')->exists($oldPath)) {
+            $disk->put($newPath, $disk->get($oldPath));
+            $disk->delete($oldPath);
+            $this->moved++;
+        } elseif ($disk->exists($newPath)) {
             $this->skipped++;
-            return;
+            if ($disk->exists($oldPath)) {
+                $disk->delete($oldPath);
+            }
+        } else {
+            $this->errors++;
         }
 
-        // Buat direktori tujuan
-        $newDir = "timsosmed/content/{$id}/{$collection}";
-        if (! Storage::disk('public')->directoryExists($newDir)) {
-            Storage::disk('public')->makeDirectory($newDir);
-        }
-
-        // Salin file utama
-        $contents = Storage::disk('public')->get($oldPath);
-        Storage::disk('public')->put($newPath, $contents);
-        Storage::disk('public')->delete($oldPath);
-        $this->moved++;
-
-        // Pindahkan conversions (misal AVIF preview)
+        // 2. Pindahkan folder conversions jika masih di lokasi lama
         $oldConvDir = "content/{$id}/{$collection}/conversions";
         $newConvDir = "timsosmed/content/{$id}/{$collection}/conversions";
 
-        if (Storage::disk('public')->directoryExists($oldConvDir)) {
-            $convFiles = Storage::disk('public')->files($oldConvDir);
-            if (! Storage::disk('public')->directoryExists($newConvDir)) {
-                Storage::disk('public')->makeDirectory($newConvDir);
+        if ($disk->directoryExists($oldConvDir)) {
+            if (! $disk->directoryExists($newConvDir)) {
+                $disk->makeDirectory($newConvDir);
             }
-            foreach ($convFiles as $convFile) {
-                $convName     = basename($convFile);
-                $convContents = Storage::disk('public')->get($convFile);
-                Storage::disk('public')->put("{$newConvDir}/{$convName}", $convContents);
-                Storage::disk('public')->delete($convFile);
+            foreach ($disk->files($oldConvDir) as $convFile) {
+                $convName = basename($convFile);
+                $disk->put("{$newConvDir}/{$convName}", $disk->get($convFile));
+                $disk->delete($convFile);
             }
-
-            // Coba hapus folder conversions lama jika sudah kosong
             try {
-                Storage::disk('public')->deleteDirectory($oldConvDir);
+                $disk->deleteDirectory($oldConvDir);
             } catch (\Throwable) {
             }
         }
 
-        // Coba hapus folder lama jika kosong
-        $oldModelDir = "content/{$id}/{$collection}";
-        try {
-            $remaining = Storage::disk('public')->files($oldModelDir);
-            if (empty($remaining)) {
-                Storage::disk('public')->deleteDirectory($oldModelDir);
+        // 3. Pastikan preview AVIF ada untuk media gambar
+        if (str_starts_with($media->mime_type ?? '', 'image/') && $disk->exists($newPath)) {
+            $fileBaseName = pathinfo($fileName, PATHINFO_FILENAME);
+            $avifPreviewName = "{$fileBaseName}-avif-preview.avif";
+            $avifPreviewRelPath = "{$newConvDir}/{$avifPreviewName}";
+
+            if (! $disk->exists($avifPreviewRelPath)) {
+                if (! $disk->directoryExists($newConvDir)) {
+                    $disk->makeDirectory($newConvDir);
+                }
+
+                // Salin file asli ke lokasi conversions lalu kompres ke AVIF
+                $disk->put($avifPreviewRelPath, $disk->get($newPath));
+                $success = ImageCompressor::compressPublic($avifPreviewRelPath, 75);
+
+                if ($success) {
+                    $this->converted++;
+                }
             }
-        } catch (\Throwable) {
+        }
+
+        // Hapus folder induk lama jika sudah kosong
+        $oldParentDir = "content/{$id}/{$collection}";
+        if ($disk->directoryExists($oldParentDir) && empty($disk->files($oldParentDir))) {
+            try {
+                $disk->deleteDirectory($oldParentDir);
+            } catch (\Throwable) {
+            }
         }
     }
 }

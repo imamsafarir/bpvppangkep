@@ -77,6 +77,38 @@ class ManageBeritaDanGaleri extends Page
         $this->form->fill();
     }
 
+    protected function getHeaderActions(): array
+    {
+        return [
+            \Filament\Actions\Action::make('migrate_images')
+                ->label('🔄 Sinkronisasi & Kompres Gambar')
+                ->color('warning')
+                ->icon('heroicon-o-arrow-path')
+                ->requiresConfirmation()
+                ->modalHeading('Sinkronisasi Gambar & Dokumen Website')
+                ->modalDescription('Proses ini akan memeriksa semua foto berita, galeri, dan isi attachment konten, memindahkannya ke folder website/ yang rapi, mengompres ke format AVIF, dan memperbarui database. Lanjutkan?')
+                ->modalSubmitActionLabel('Ya, Sinkronisasi Sekarang')
+                ->action(function () {
+                    try {
+                        \Illuminate\Support\Facades\Artisan::call('website:migrate-images');
+                        $this->dispatch('refreshTables');
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Sinkronisasi Selesai')
+                            ->body('Semua gambar berita, galeri, dan attachment berhasil disinkronkan ke AVIF.')
+                            ->send();
+                    } catch (\Throwable $e) {
+                        \Filament\Notifications\Notification::make()
+                            ->danger()
+                            ->title('Sinkronisasi Gagal')
+                            ->body($e->getMessage())
+                            ->send();
+                    }
+                }),
+        ];
+    }
+
     public function form(Schema $schema): Schema
     {
         return $schema
