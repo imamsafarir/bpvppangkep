@@ -330,7 +330,7 @@ class ShortlinkController
 
             foreach ($leads as $lead) {
                 fputcsv($handle, [
-                    $lead->created_at ? $lead->created_at->format('d/m/Y H:i:s') : '-',
+                    $lead->created_at ? $lead->created_at->format('Y-m-d H:i:s') : '-',
                     $lead->shortlink?->pegawai_name ?? '-',
                     $lead->shortlink?->code ?? '-',
                     $lead->nama ?? '-',
