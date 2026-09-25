@@ -1010,8 +1010,11 @@
 
         // Listener pesan dari iframe anak saat disimpan atau dibatalkan
         window.addEventListener('message', function(event) {
-            if (event.data === 'content-saved' || event.data?.type === 'content-saved' ||
-                event.data === 'close-content-popup' || event.data?.type === 'close-content-popup') {
+            var isSaved = (event.data === 'content-saved' || (event.data && event.data.type === 'content-saved'));
+            var isClosed = (event.data === 'close-content-popup' || (event.data && event.data.type ===
+                'close-content-popup'));
+
+            if (isSaved || isClosed) {
                 closeContentPopup();
             }
         });
@@ -1029,8 +1032,7 @@
             newTabEl.href = url;
             loadingEl.style.display = 'flex';
 
-            iframe.src = url;
-            modal.style.display = 'flex';
+            var hasInitialLoaded = false;
 
             iframe.onload = function() {
                 loadingEl.style.display = 'none';
@@ -1039,11 +1041,20 @@
                     var iframeDoc = iframe.contentDocument || iframeWin.document;
                     var currentPath = iframeWin.location.pathname;
 
-                    // Jika iframe dialihkan ke calendar-page atau admin/contents setelah create/edit/action disimpan
-                    if (currentPath.includes('calendar-page') || currentPath === '/admin/contents' || currentPath ===
-                        '/admin/contents/') {
-                        closeContentPopup();
+                    // Abaikan jika blank atau belum terisi
+                    if (!currentPath || currentPath === 'blank' || iframeWin.location.href === 'about:blank') {
                         return;
+                    }
+
+                    // Hanya tutup otomatis jika pengguna sudah submit form dan diredirect ke calendar-page atau admin/contents
+                    if (hasInitialLoaded) {
+                        if (currentPath.includes('calendar-page') || currentPath === '/admin/contents' ||
+                            currentPath === '/admin/contents/') {
+                            closeContentPopup();
+                            return;
+                        }
+                    } else {
+                        hasInitialLoaded = true;
                     }
 
                     if (iframeDoc && iframeDoc.head) {
@@ -1063,6 +1074,9 @@
                     console.log('Iframe styling notice:', e);
                 }
             };
+
+            iframe.src = url;
+            modal.style.display = 'flex';
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -1218,11 +1232,11 @@
                             ${subteamHtml}
 
                             ${(platformsHtml || chatBadgeHtml) ? `
-                                    <div class="cal-card-footer">
-                                        ${platformsHtml ? `<div class="cal-platforms-row">${platformsHtml}</div>` : '<div></div>'}
-                                        ${chatBadgeHtml ? `<div class="cal-bottom-chat">${chatBadgeHtml}</div>` : ''}
-                                    </div>
-                                ` : ''}
+                                        <div class="cal-card-footer">
+                                            ${platformsHtml ? `<div class="cal-platforms-row">${platformsHtml}</div>` : '<div></div>'}
+                                            ${chatBadgeHtml ? `<div class="cal-bottom-chat">${chatBadgeHtml}</div>` : ''}
+                                        </div>
+                                    ` : ''}
 
                             ${deadlineMarkerHtml}
                         </div>
