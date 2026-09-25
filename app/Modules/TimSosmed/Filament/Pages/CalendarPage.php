@@ -4,7 +4,9 @@ namespace App\Modules\TimSosmed\Filament\Pages;
 
 use App\Modules\TimSosmed\Filament\Resources\Contents\ContentResource;
 use App\Modules\TimSosmed\Filament\Widgets\BebanKerjaOverview;
+use App\Modules\TimSosmed\Models\Comment;
 use App\Modules\TimSosmed\Models\Content;
+use App\Modules\TimSosmed\Models\ContentRead;
 use Filament\Pages\Page;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -39,14 +41,23 @@ class CalendarPage extends Page
         ];
     }
 
+    public ?string $lastVersionHash = null;
+
     /**
-     * Data event kalender
+     * Data event kalender dengan informasi diskusi & status belum dibaca
      */
     public function getCalendarEvents(): array
     {
-        return Content::with(['instruktur', 'pegawai', 'planner', 'editor', 'admin', 'platforms'])
+        $userId = Auth::id();
+
+        // Ambil waktu terakhir user membaca diskusi pada setiap konten
+        $reads = ContentRead::where('user_id', $userId)
+            ->pluck('last_read_at', 'content_id')
+            ->toArray();
+
+        return Content::with(['instruktur', 'pegawai', 'planner', 'editor', 'admin', 'platforms', 'comments'])
             ->get()
-            ->map(function ($content) {
+            ->map(function ($content) use ($userId, $reads) {
                 $statusColor = match ($content->status) {
                     'draft' => '#64748b',
                     'menunggu_editor' => '#f59e0b',
@@ -65,6 +76,25 @@ class CalendarPage extends Page
                     'selesai' => 'Selesai / Live',
                     default => ucfirst($content->status),
                 };
+
+                // Perhitungan Komentar Diskusi & Status Belum Dibaca (Unread)
+                $comments = $content->comments;
+                $commentsCount = $comments->count();
+                $unreadCount = 0;
+
+                if ($commentsCount > 0) {
+                    $lastReadAt = isset($reads[$content->id]) ? Carbon::parse($reads[$content->id]) : null;
+
+                    if ($lastReadAt) {
+                        // Komentar baru dari pengguna lain yang masuk setelah waktu baca terakhir
+                        $unreadCount = $comments->where('user_id', '!=', $userId)
+                            ->filter(fn($c) => $c->created_at > $lastReadAt)
+                            ->count();
+                    } else {
+                        // Jika belum pernah dibuka sama sekali, semua komentar dari pengguna lain dianggap baru
+                        $unreadCount = $comments->where('user_id', '!=', $userId)->count();
+                    }
+                }
 
                 // Cari konseptor / pembuat draft awal
                 $creator = $content->instruktur ?? $content->pegawai ?? $content->planner;
@@ -129,16 +159,56 @@ class CalendarPage extends Page
 
                 $konseptor = $creator?->name ?? null;
 
+                $canEdit = ContentResource::canEdit($content);
+                $isSelesai = $content->status === 'selesai';
+                $targetUrl = ($isSelesai || ! $canEdit)
+                    ? ContentResource::getUrl('view', ['record' => $content->id])
+                    : ContentResource::getUrl('edit', ['record' => $content->id]);
+                $actionType = ($isSelesai || ! $canEdit) ? 'view' : 'edit';
+
+                // Status Deadline: Muncul jika konten belum selesai dan tanggal_kegiatan <= hari ini
+                $isDeadline = false;
+                $isOverdue = false;
+                $isToday = false;
+                $deadlineLabel = null;
+                $deadlineDays = 0;
+
+                if (! $isSelesai && ! empty($content->tanggal_kegiatan)) {
+                    $today = Carbon::today();
+                    $targetDate = Carbon::parse($content->tanggal_kegiatan)->startOfDay();
+                    $diffDays = (int) $today->diffInDays($targetDate, false);
+
+                    if ($diffDays < 0) {
+                        $isDeadline = true;
+                        $isOverdue = true;
+                        $deadlineDays = abs($diffDays);
+                        $deadlineLabel = '⚠️ Lewat ' . $deadlineDays . ' hr';
+                    } elseif ($diffDays === 0) {
+                        $isDeadline = true;
+                        $isToday = true;
+                        $deadlineLabel = '🔥 Hari Ini';
+                    }
+                }
+
                 return [
                     'id' => (string) $content->id,
                     'title' => $content->nama_kegiatan,
                     'start' => Carbon::parse($content->tanggal_kegiatan)->format('Y-m-d'),
-                    'url' => ContentResource::getUrl('edit', ['record' => $content->id]),
+                    'url' => $targetUrl,
                     'color' => $statusColor,
                     'extendedProps' => [
                         'status' => $content->status,
                         'status_label' => $statusLabel,
                         'status_color' => $statusColor,
+                        'action_url' => $targetUrl,
+                        'action_type' => $actionType,
+                        'can_edit' => $canEdit,
+                        'is_selesai' => $isSelesai,
+                        'is_deadline' => $isDeadline,
+                        'is_overdue' => $isOverdue,
+                        'is_today' => $isToday,
+                        'deadline_label' => $deadlineLabel,
+                        'deadline_days' => $deadlineDays,
                         'jenis_konten' => $content->jenis_konten === 'final' ? 'Final' : 'Bahan',
                         'platforms' => $content->platforms->pluck('name')->toArray(),
                         'petugas_role' => $petugas['role'],
@@ -148,11 +218,51 @@ class CalendarPage extends Page
                         'planner' => $content->planner ? $content->planner->name : '-',
                         'editor' => $content->editor ? $content->editor->name : '-',
                         'admin' => $content->admin ? $content->admin->name : '-',
-                        'edit_url' => ContentResource::getUrl('edit', ['record' => $content->id]),
+                        'edit_url' => $targetUrl,
+                        'comments_count' => $commentsCount,
+                        'unread_comments_count' => $unreadCount,
+                        'has_unread_comments' => $unreadCount > 0,
                     ],
                 ];
             })
             ->toArray();
+    }
+
+    /**
+     * Tandai diskusi konten ini sudah dibaca oleh user saat membuka popup
+     */
+    public function markAsRead(int $contentId): void
+    {
+        if (Auth::check()) {
+            ContentRead::updateOrCreate(
+                [
+                    'content_id' => $contentId,
+                    'user_id' => Auth::id(),
+                ],
+                [
+                    'last_read_at' => now(),
+                ]
+            );
+
+            $this->dispatch('calendar-refresh');
+        }
+    }
+
+    /**
+     * Polling otomatis latar belakang (ultra cepat < 1ms):
+     * Cek jika ada perubahan konten atau komentar baru tanpa perlu refresh browser
+     */
+    public function checkCalendarUpdates(): void
+    {
+        $latestContent = Content::max('updated_at') ?? '0';
+        $latestComment = Comment::max('created_at') ?? '0';
+        $currentHash = md5($latestContent . '_' . $latestComment);
+
+        if ($this->lastVersionHash !== null && $this->lastVersionHash !== $currentHash) {
+            $this->dispatch('calendar-refresh');
+        }
+
+        $this->lastVersionHash = $currentHash;
     }
 
     protected function getViewData(): array

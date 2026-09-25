@@ -76,12 +76,22 @@ class StatistikTim extends Page implements HasTable
     |--------------------------------------------------------------------------
     | QUERY USER TIM MEDSOS
     |--------------------------------------------------------------------------
-    | Hanya membaca user yang memiliki peran tim sosial media:
-    | Admin/Super Admin, Planner, Editor, Admin Platform, Instruktur
+    | Membaca user yang memiliki peran tim sosial media.
+    | Akun Superadmin / Administrator sistem disembunyikan dari statistik performa tim.
     */
     protected function teamUserQuery(): Builder
     {
-        return User::medsosTeam();
+        return User::medsosTeam()
+            ->where(function (Builder $query) {
+                $query->whereDoesntHave('roles', function (Builder $q) {
+                    $q->whereIn('name', ['super_admin', 'admin']);
+                })
+                    ->where('users.username', '!=', 'superadmin')
+                    ->where('users.email', '!=', 'superadmin@admin.com')
+                    ->where('users.role', 'not like', '%super_admin%')
+                    ->where('users.role', 'not like', '%superadmin%')
+                    ->where('users.role', '!=', 'admin');
+            });
     }
 
     /*
@@ -565,7 +575,6 @@ class StatistikTim extends Page implements HasTable
                     ->label('Filter Peran Medsos')
                     ->placeholder('Semua Peran')
                     ->options([
-                        'admin'          => '👑 Administrator System',
                         'planner'        => '📋 Medsos Planner',
                         'editor'         => '🎨 Medsos Editor',
                         'admin_platform' => '🚀 Medsos Admin Platform',
@@ -576,7 +585,6 @@ class StatistikTim extends Page implements HasTable
                         if (! $role) return $query;
 
                         $matchRoles = match ($role) {
-                            'admin'          => ['admin', 'super_admin'],
                             'planner'        => ['planner', 'medsos_planner'],
                             'editor'         => ['editor', 'medsos_editor'],
                             'admin_platform' => ['admin_platform', 'medsos_admin_platform'],

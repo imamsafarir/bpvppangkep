@@ -1,4 +1,4 @@
-<x-filament-panels::page>
+<x-filament-panels::page wire:poll.visible.15s="checkCalendarUpdates">
     {{-- ================= FULLCALENDAR & STYLING ================= --}}
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
 
@@ -120,9 +120,20 @@
         }
 
         .fc .fc-daygrid-day-frame {
-            min-height: 130px !important;
+            min-height: 140px !important;
+            height: 100% !important;
             cursor: pointer;
             transition: background-color 0.15s ease;
+            display: flex !important;
+            flex-direction: column !important;
+            box-sizing: border-box !important;
+        }
+
+        .fc .fc-daygrid-day-top {
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: row-reverse;
+            padding: 2px 4px 0 4px;
         }
 
         .fc .fc-daygrid-day:hover .fc-daygrid-day-frame {
@@ -135,11 +146,31 @@
 
         .fc-daygrid-day-events {
             margin: 0 !important;
-            padding: 2px 4px !important;
+            padding: 2px 4px 6px 4px !important;
+            flex: 1 1 auto;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 5px !important;
+            position: relative !important;
+            min-height: 0;
         }
 
-        .fc-daygrid-event-harness {
-            margin-bottom: 6px !important;
+        /* OVERRIDE ABSOLUTE POSITIONING TO PREVENT CARDS FROM OVERLAPPING */
+        .fc .fc-daygrid-event-harness,
+        .fc .fc-daygrid-event-harness-abs {
+            position: relative !important;
+            top: auto !important;
+            left: auto !important;
+            right: auto !important;
+            bottom: auto !important;
+            margin: 0 !important;
+            margin-bottom: 5px !important;
+            display: block !important;
+            visibility: visible !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
+            z-index: 1 !important;
         }
 
         .fc-event,
@@ -150,6 +181,10 @@
             padding: 0 !important;
             cursor: pointer !important;
             white-space: normal !important;
+            display: block !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            box-sizing: border-box !important;
         }
 
         /* ========================================================
@@ -357,22 +392,23 @@
         }
 
         /* ========================================================
-           KARTU EVENT MODERN FULLCALENDAR
+           KARTU EVENT MODERN FULLCALENDAR (RESPONSIF & BEBAS OVERLAP)
            ======================================================== */
         .cal-event-card {
             background-color: #ffffff;
             border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: 7px 9px 7px 11px;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+            border-radius: 9px;
+            padding: 6px 7px 6px 9px;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 3px;
             text-align: left;
             width: 100%;
+            max-width: 100%;
             box-sizing: border-box;
         }
 
@@ -383,14 +419,14 @@
         }
 
         .cal-event-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.12), 0 3px 6px -2px rgba(0, 0, 0, 0.06);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 10px -2px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
             border-color: #cbd5e1;
         }
 
         .dark .cal-event-card:hover {
             border-color: #64748b;
-            box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.4);
         }
 
         .cal-status-stripe {
@@ -398,25 +434,31 @@
             left: 0;
             top: 0;
             bottom: 0;
-            width: 4px;
-            border-radius: 10px 0 0 10px;
+            width: 3.5px;
+            border-radius: 9px 0 0 9px;
         }
 
         .cal-top-meta {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 6px;
+            gap: 4px;
+            width: 100%;
+            box-sizing: border-box;
+            margin-bottom: 2px;
         }
 
         .cal-type-tag {
-            font-size: 10px;
+            font-size: 8.5px;
             font-weight: 700;
             text-transform: uppercase;
-            padding: 1px 6px;
+            padding: 1px 4.5px;
             border-radius: 4px;
             background-color: #f1f5f9;
             color: #475569;
+            white-space: nowrap;
+            line-height: 1.2;
+            flex-shrink: 0;
         }
 
         .dark .cal-type-tag {
@@ -424,15 +466,94 @@
             color: #cbd5e1;
         }
 
+        /* Badge Obrolan / Diskusi Tim di Kartu Kalender */
+        .cal-chat-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 9px;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 9999px;
+            line-height: 1.2;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .cal-chat-badge.is-read {
+            background-color: #f1f5f9;
+            color: #475569;
+            border: 1px solid #cbd5e1;
+        }
+
+        .dark .cal-chat-badge.is-read {
+            background-color: #334155;
+            color: #cbd5e1;
+            border-color: #475569;
+        }
+
+        .cal-chat-badge.is-unread {
+            background-color: #fef2f2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+            box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.2);
+            animation: cal-pulse-unread 2s infinite ease-in-out;
+        }
+
+        .dark .cal-chat-badge.is-unread {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border-color: #ef4444;
+        }
+
+        @keyframes cal-pulse-unread {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .cal-unread-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 9999px;
+            background-color: #ef4444;
+            display: inline-block;
+            box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);
+            flex-shrink: 0;
+        }
+
+        .cal-unread-pill {
+            background-color: #ef4444;
+            color: #ffffff;
+            font-size: 8.5px;
+            padding: 0 3.5px;
+            border-radius: 9999px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            flex-shrink: 0;
+        }
+
         .cal-card-title {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 700;
             color: #0f172a;
-            line-height: 1.4;
-            white-space: normal !important;
-            overflow: visible !important;
+            line-height: 1.35;
+            margin: 2px 0 3px 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
             word-break: break-word;
-            margin: 3px 0 5px 0;
+            width: 100%;
         }
 
         .dark .cal-card-title {
@@ -442,14 +563,15 @@
         .cal-processor-badge {
             display: flex;
             align-items: center;
-            gap: 6px;
-            padding: 4px 7px;
+            gap: 5px;
+            padding: 3px 6px;
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
-            border-radius: 7px;
-            margin-bottom: 4px;
+            border-radius: 6px;
             box-sizing: border-box;
             width: 100%;
+            min-width: 0;
+            overflow: hidden;
         }
 
         .dark .cal-processor-badge {
@@ -458,7 +580,7 @@
         }
 
         .cal-processor-icon {
-            font-size: 15px;
+            font-size: 13px;
             line-height: 1;
             flex-shrink: 0;
         }
@@ -468,15 +590,19 @@
             flex-direction: column;
             min-width: 0;
             flex: 1;
+            overflow: hidden;
         }
 
         .cal-processor-role {
-            font-size: 9px;
+            font-size: 8px;
             font-weight: 700;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.03em;
             color: #64748b;
-            line-height: 1.2;
+            line-height: 1.1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .dark .cal-processor-role {
@@ -484,12 +610,13 @@
         }
 
         .cal-processor-name {
-            font-size: 11px;
+            font-size: 10px;
             font-weight: 700;
             color: #1e293b;
-            line-height: 1.3;
-            white-space: normal;
-            word-break: break-word;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .dark .cal-processor-name {
@@ -497,13 +624,15 @@
         }
 
         .cal-card-subteam {
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 600;
             color: #64748b;
-            padding: 1px 2px 3px 2px;
-            white-space: normal;
-            word-break: break-word;
-            line-height: 1.3;
+            padding: 0 1px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+            width: 100%;
         }
 
         .dark .cal-card-subteam {
@@ -515,8 +644,13 @@
             align-items: center;
             justify-content: space-between;
             gap: 4px;
-            padding-top: 3px;
+            flex-wrap: wrap;
+            padding-top: 4px;
+            margin-top: 2px;
             border-top: 1px dashed #f1f5f9;
+            width: 100%;
+            min-width: 0;
+            box-sizing: border-box;
         }
 
         .dark .cal-card-footer {
@@ -526,18 +660,29 @@
         .cal-platforms-row {
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 2.5px;
             flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .cal-bottom-chat {
+            display: flex;
+            align-items: center;
+            margin-left: auto;
+            flex-shrink: 0;
         }
 
         .cal-platform-chip {
-            font-size: 9.5px;
+            font-size: 8.5px;
             font-weight: 600;
-            padding: 1px 5px;
-            border-radius: 4px;
+            padding: 0.5px 4px;
+            border-radius: 3.5px;
             background-color: #f8fafc;
             border: 1px solid #e2e8f0;
             color: #334155;
+            white-space: nowrap;
+            line-height: 1.2;
+            flex-shrink: 0;
         }
 
         .dark .cal-platform-chip {
@@ -547,13 +692,14 @@
         }
 
         .cal-team-avatars {
-            font-size: 10.5px;
+            font-size: 9.5px;
             font-weight: 600;
             color: #64748b;
             display: flex;
             align-items: center;
-            gap: 3px;
+            gap: 2px;
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .dark .cal-team-avatars {
@@ -651,6 +797,103 @@
                 transform: scale(1) translateY(0);
             }
         }
+
+        /* ========================================================
+           PENANDA DEADLINE KARTU EVENT (PALING BAWAH KARTU)
+           ======================================================== */
+        .cal-event-card.has-deadline-overdue {
+            border-color: #fca5a5 !important;
+            box-shadow: 0 1px 3px rgba(239, 68, 68, 0.15);
+        }
+
+        .dark .cal-event-card.has-deadline-overdue {
+            border-color: rgba(239, 68, 68, 0.5) !important;
+            box-shadow: 0 1px 4px rgba(239, 68, 68, 0.25);
+        }
+
+        .cal-event-card.has-deadline-today {
+            border-color: #fcd34d !important;
+            box-shadow: 0 1px 3px rgba(245, 158, 11, 0.15);
+        }
+
+        .dark .cal-event-card.has-deadline-today {
+            border-color: rgba(245, 158, 11, 0.5) !important;
+            box-shadow: 0 1px 4px rgba(245, 158, 11, 0.25);
+        }
+
+        .cal-card-deadline-tag {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 3px 6px;
+            border-radius: 6px;
+            font-size: 8.5px;
+            font-weight: 800;
+            line-height: 1.2;
+            letter-spacing: 0.02em;
+            width: 100%;
+            box-sizing: border-box;
+            margin-top: 4px;
+            text-align: center;
+        }
+
+        .cal-card-deadline-tag.cal-card-deadline-overdue {
+            background-color: #fef2f2;
+            color: #b91c1c;
+            border: 1px solid #fecaca;
+        }
+
+        .dark .cal-card-deadline-tag.cal-card-deadline-overdue {
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+
+        .cal-card-deadline-tag.cal-card-deadline-today {
+            background-color: #fffbeb;
+            color: #b45309;
+            border: 1px solid #fde68a;
+        }
+
+        .dark .cal-card-deadline-tag.cal-card-deadline-today {
+            background-color: rgba(245, 158, 11, 0.2);
+            color: #fcd34d;
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+
+        .cal-deadline-pulse-dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 9999px;
+            background-color: currentColor;
+            flex-shrink: 0;
+            animation: cal-pulse-anim 1.8s infinite;
+        }
+
+        @keyframes cal-pulse-anim {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.8);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .cal-deadline-tag-text {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-weight: 800;
+        }
     </style>
 
     {{-- ================= CONTROL BAR & LEGENDA ATAS ================= --}}
@@ -696,6 +939,8 @@
         class="dark:!bg-gray-900 dark:!border-gray-800">
         <div id='calendar' wire:ignore></div>
     </div>
+
+
 
     {{-- ================= POPUP MODAL: HALAMAN FORM ASLI (EDIT / CREATE) ================= --}}
     <div id="contentFrameModal" class="cal-modal-backdrop" style="display: none;"
@@ -829,7 +1074,8 @@
                 contentHeight: 'auto',
                 handleWindowResize: true,
                 fixedWeekCount: false,
-                dayMaxEvents: 3,
+                dayMaxEvents: false,
+                expandRows: true,
 
                 headerToolbar: {
                     left: 'prev,next today',
@@ -851,14 +1097,21 @@
                     openContentPopup(createUrl, '✨ Buat Rencana Konten: ' + info.dateStr, 'Buat Baru');
                 },
 
-                // 2. KLIK EVENT (BUKA POPUP HALAMAN EDIT KONTEN ASLI)
+                // 2. KLIK EVENT (BUKA POPUP: VIEW JIKA SUDAH SELESAI / EDIT JIKA MASIH PROSES)
                 eventClick: function(info) {
                     info.jsEvent.preventDefault();
                     var contentId = parseInt(info.event.id);
                     if (contentId) {
-                        var editUrl = "/admin/contents/" + contentId + "/edit";
-                        openContentPopup(editUrl, '✏️ Edit: ' + info.event.title, 'Edit Konten #' +
-                            contentId);
+                        @this.markAsRead(contentId);
+                        var props = info.event.extendedProps || {};
+                        var isFinished = props.status === 'selesai' || props.is_selesai || props
+                            .action_type === 'view' || !props.can_edit;
+                        var targetUrl = props.action_url || (isFinished ? ("/admin/contents/" +
+                            contentId) : ("/admin/contents/" + contentId + "/edit"));
+                        var modalTitle = (isFinished ? '👁️ Detail Konten: ' : '✏️ Edit: ') + info.event
+                            .title;
+                        var modalBadge = (isFinished ? 'Lihat Konten #' : 'Edit Konten #') + contentId;
+                        openContentPopup(targetUrl, modalTitle, modalBadge);
                     }
                 },
 
@@ -874,9 +1127,65 @@
                     var petugasName = props.petugas_name || '-';
                     var petugasIcon = props.petugas_icon || '👤';
                     var konseptor = props.konseptor || null;
+                    var commentsCount = props.comments_count || 0;
+                    var unreadCount = props.unread_comments_count || 0;
+                    var hasUnread = props.has_unread_comments || false;
+                    var isFinished = status === 'selesai' || props.is_selesai || props.action_type ===
+                        'view' || !props.can_edit;
+                    var actionHint = isFinished ? 'melihat detail' : 'membuka & mengedit';
 
-                    var platformsHtml = platforms.map(p =>
-                        `<span class="cal-platform-chip">${p}</span>`).join('');
+                    // Penanda Deadline di Bagian Paling Bawah Kartu
+                    var isDeadline = props.is_deadline || false;
+                    var isOverdue = props.is_overdue || false;
+                    var isToday = props.is_today || false;
+                    var deadlineLabel = props.deadline_label || '';
+
+                    var deadlineMarkerHtml = '';
+                    if (isDeadline && deadlineLabel) {
+                        var deadlineClass = isOverdue ? 'cal-card-deadline-overdue' :
+                            'cal-card-deadline-today';
+                        deadlineMarkerHtml = `
+                            <div class="cal-card-deadline-tag ${deadlineClass}" title="Tenggat Waktu: ${deadlineLabel}">
+                                <span class="cal-deadline-pulse-dot"></span>
+                                <span class="cal-deadline-tag-text">${deadlineLabel}</span>
+                            </div>
+                        `;
+                    }
+
+                    var cardDeadlineBorderClass = '';
+                    if (isDeadline) {
+                        cardDeadlineBorderClass = isOverdue ? 'has-deadline-overdue' :
+                            'has-deadline-today';
+                    }
+
+                    var chatBadgeHtml = '';
+                    if (hasUnread) {
+                        chatBadgeHtml = `
+                            <span class="cal-chat-badge is-unread" title="${commentsCount} diskusi (${unreadCount} pesan baru belum dibaca)">
+                                <span class="cal-unread-dot"></span>
+                                💬 ${commentsCount}
+                                <span class="cal-unread-pill">${unreadCount} baru</span>
+                            </span>
+                        `;
+                    } else if (commentsCount > 0) {
+                        chatBadgeHtml = `
+                            <span class="cal-chat-badge is-read" title="${commentsCount} diskusi obrolan tim">
+                                💬 ${commentsCount}
+                            </span>
+                        `;
+                    }
+
+                    var platformsHtml = '';
+                    if (platforms && platforms.length > 0) {
+                        if (platforms.length <= 2) {
+                            platformsHtml = platforms.map(p =>
+                                `<span class="cal-platform-chip">${p}</span>`).join('');
+                        } else {
+                            platformsHtml = platforms.slice(0, 2).map(p =>
+                                    `<span class="cal-platform-chip">${p}</span>`).join('') +
+                                `<span class="cal-platform-chip" title="${platforms.slice(2).join(', ')}">+${platforms.length - 2}</span>`;
+                        }
+                    }
 
                     var subteamHtml = '';
                     if (konseptor && status !== 'draft') {
@@ -885,12 +1194,12 @@
                     }
 
                     var cardHtml = `
-                        <div class="cal-event-card" title="Klik untuk membuka & mengedit konten: ${arg.event.title}">
+                        <div class="cal-event-card ${cardDeadlineBorderClass}" title="Klik untuk ${actionHint} konten: ${arg.event.title}">
                             <div class="cal-status-stripe" style="background-color: ${statusColor};"></div>
 
                             <div class="cal-top-meta">
                                 <span class="cal-badge-pill status-${status}">
-                                    <span style="display:inline-block; width:6px; height:6px; border-radius:9999px; background-color:${statusColor};"></span>
+                                    <span style="display:inline-block; width:5px; height:5px; border-radius:9999px; background-color:${statusColor}; flex-shrink:0;"></span>
                                     ${statusLabel}
                                 </span>
                                 <span class="cal-type-tag">${jenisKonten}</span>
@@ -898,7 +1207,7 @@
 
                             <div class="cal-card-title">${arg.event.title}</div>
 
-                            <div class="cal-processor-badge">
+                            <div class="cal-processor-badge" title="Petugas: ${petugasRole} (${petugasName})">
                                 <span class="cal-processor-icon">${petugasIcon}</span>
                                 <div class="cal-processor-details">
                                     <span class="cal-processor-role">${petugasRole}</span>
@@ -908,11 +1217,14 @@
 
                             ${subteamHtml}
 
-                            ${platformsHtml ? `
+                            ${(platformsHtml || chatBadgeHtml) ? `
                                     <div class="cal-card-footer">
-                                        <div class="cal-platforms-row">${platformsHtml}</div>
+                                        ${platformsHtml ? `<div class="cal-platforms-row">${platformsHtml}</div>` : '<div></div>'}
+                                        ${chatBadgeHtml ? `<div class="cal-bottom-chat">${chatBadgeHtml}</div>` : ''}
                                     </div>
                                 ` : ''}
+
+                            ${deadlineMarkerHtml}
                         </div>
                     `;
 

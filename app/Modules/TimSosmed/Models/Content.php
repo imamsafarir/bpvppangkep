@@ -64,4 +64,47 @@ class Content extends Model implements HasMedia
     {
         return $this->hasMany(Comment::class)->latest();
     }
+
+    public function reads(): HasMany
+    {
+        return $this->hasMany(ContentRead::class);
+    }
+
+    /**
+     * Hitung jumlah komentar belum dibaca untuk user tertentu
+     */
+    public function getUnreadCommentsCount(?int $userId = null): int
+    {
+        $userId = $userId ?? \Illuminate\Support\Facades\Auth::id();
+        if (! $userId) {
+            return 0;
+        }
+
+        $comments = $this->relationLoaded('comments') ? $this->comments : $this->comments()->get();
+        if ($comments->isEmpty()) {
+            return 0;
+        }
+
+        $userRead = $this->relationLoaded('reads')
+            ? $this->reads->firstWhere('user_id', $userId)
+            : $this->reads()->where('user_id', $userId)->first();
+
+        $lastReadAt = $userRead?->last_read_at ? \Illuminate\Support\Carbon::parse($userRead->last_read_at) : null;
+
+        if ($lastReadAt) {
+            return $comments->where('user_id', '!=', $userId)
+                ->filter(fn($c) => $c->created_at > $lastReadAt)
+                ->count();
+        }
+
+        return $comments->where('user_id', '!=', $userId)->count();
+    }
+
+    /**
+     * Cek apakah terdapat komentar belum dibaca untuk user tertentu
+     */
+    public function hasUnreadComments(?int $userId = null): bool
+    {
+        return $this->getUnreadCommentsCount($userId) > 0;
+    }
 }

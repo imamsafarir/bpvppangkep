@@ -18,6 +18,7 @@ Route::middleware('web')->group(function () {
     Route::get('/s/{code}', [ShortlinkController::class, 'handle'])->name('shortlink.handle');
     Route::post('/s/{code}/submit', [ShortlinkController::class, 'submit'])->name('shortlink.submit');
     Route::get('/s/{code}/qr', [ShortlinkController::class, 'downloadQr'])->name('shortlink.qr');
+    Route::get('/shortlink/feed/leads.csv', [ShortlinkController::class, 'liveFeedCsv'])->name('shortlink.leads.feed');
 
     /*
     |--------------------------------------------------------------------------

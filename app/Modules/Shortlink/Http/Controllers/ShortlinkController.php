@@ -58,7 +58,7 @@ class ShortlinkController
         $validated = $request->validate($rules);
 
         // Simpan data pengunjung
-        ShortlinkLead::create([
+        $lead = ShortlinkLead::create([
             'shortlink_id' => $shortlink->id,
             'nama'         => $validated['nama'] ?? null,
             'whatsapp'     => $validated['whatsapp'] ?? null,
@@ -283,5 +283,67 @@ class ShortlinkController
 
         return redirect()->to(url('/admin/manage-shortlink'))
             ->with('success', "Berhasil mengimpor {$insertedCount} shortlink & barcode baru!");
+    }
+
+    /**
+     * Endpoint Feed Data CSV Langsung untuk Google Spreadsheet (=IMPORTDATA)
+     */
+    public function liveFeedCsv(\Illuminate\Http\Request $request)
+    {
+        $savedToken = \App\Modules\Shortlink\Models\ShortlinkSetting::get('spreadsheet_feed_token');
+
+        if (empty($savedToken)) {
+            $savedToken = bin2hex(random_bytes(16));
+            \App\Modules\Shortlink\Models\ShortlinkSetting::set('spreadsheet_feed_token', $savedToken);
+        }
+
+        $inputToken = $request->query('token');
+
+        if (empty($inputToken) || ! hash_equals($savedToken, $inputToken)) {
+            return response('Akses ditolak: Token tidak valid atau kedaluwarsa.', 403, [
+                'Content-Type' => 'text/plain; charset=UTF-8',
+            ]);
+        }
+
+        $leads = ShortlinkLead::query()->with('shortlink')->latest()->get();
+
+        $headers = [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Cache-Control'       => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Content-Disposition' => 'inline; filename="leads_live_feed.csv"',
+        ];
+
+        $callback = function () use ($leads) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+
+            fputcsv($handle, [
+                'Waktu Akses',
+                'Nama Pegawai / Pemilik Link',
+                'Kode Shortlink',
+                'Nama Pengunjung',
+                'Nomor WhatsApp',
+                'Alamat Email',
+                'Alamat IP',
+                'Perangkat Pengunjung',
+            ]);
+
+            foreach ($leads as $lead) {
+                fputcsv($handle, [
+                    $lead->created_at ? $lead->created_at->format('d/m/Y H:i:s') : '-',
+                    $lead->shortlink?->pegawai_name ?? '-',
+                    $lead->shortlink?->code ?? '-',
+                    $lead->nama ?? '-',
+                    $lead->whatsapp ? "'" . $lead->whatsapp : '-',
+                    $lead->email ?? '-',
+                    $lead->ip_address ?? '-',
+                    $lead->user_agent ?? '-',
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

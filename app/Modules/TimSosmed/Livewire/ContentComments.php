@@ -47,6 +47,7 @@ class ContentComments extends Component
         $this->reset('newComment');
 
         $this->dispatch('comment-added');
+        $this->dispatch('calendar-refresh');
 
         Notification::make()
             ->title('Komentar berhasil dikirim')
@@ -68,6 +69,8 @@ class ContentComments extends Component
         if ($user && ($user->id === $comment->user_id || $user->isAdmin())) {
             $comment->delete();
 
+            $this->dispatch('calendar-refresh');
+
             Notification::make()
                 ->title('Komentar dihapus')
                 ->success()
@@ -77,6 +80,18 @@ class ContentComments extends Component
 
     public function render()
     {
+        if ($this->contentId && Auth::check()) {
+            \App\Modules\TimSosmed\Models\ContentRead::updateOrCreate(
+                [
+                    'content_id' => $this->contentId,
+                    'user_id' => Auth::id(),
+                ],
+                [
+                    'last_read_at' => now(),
+                ]
+            );
+        }
+
         $comments = $this->contentId
             ? Comment::where('content_id', $this->contentId)->with('user')->oldest()->get()
             : collect();

@@ -4,6 +4,8 @@ namespace App\Modules\Shortlink\Filament\Pages;
 
 use App\Modules\Shortlink\Models\Shortlink;
 use App\Modules\Shortlink\Models\ShortlinkLead;
+use App\Modules\Shortlink\Models\ShortlinkSetting;
+use App\Modules\Shortlink\Services\ShortlinkSpreadsheetService;
 use BackedEnum;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -136,19 +138,19 @@ class ManageShortlink extends Page
                             Grid::make(2)
                                 ->schema([
                                     TextInput::make('custom_title')
-                                        ->label('Judul Header Kustom')
+                                        ->label('Judul Header Kustom (opsional)')
                                         ->placeholder('Selamat Datang!')
                                         ->maxLength(100)
                                         ->helperText('Kosongkan untuk memakai teks bawaan: "Selamat Datang!"'),
 
                                     TextInput::make('custom_button_text')
-                                        ->label('Teks Tombol Kustom')
+                                        ->label('Teks Tombol Kustom (opsional)')
                                         ->placeholder('Lanjutkan ke Tautan')
                                         ->maxLength(50)
                                         ->helperText('Kosongkan untuk memakai teks bawaan: "Lanjutkan ke Tautan"'),
 
                                     Textarea::make('custom_description')
-                                        ->label('Teks Arahan Kustom')
+                                        ->label('Teks Arahan Kustom (opsional)')
                                         ->placeholder('Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan.')
                                         ->rows(2)
                                         ->maxLength(500)
@@ -175,25 +177,25 @@ class ManageShortlink extends Page
         $state = $this->form->getState();
 
         Shortlink::create([
-            'pegawai_name'       => $state['pegawai_name'],
-            'code'               => Shortlink::generateUniqueCode(5),
-            'destination_url'    => $state['destination_url'],
-            'is_capture_active'  => $state['is_capture_active'] ?? false,
-            'capture_fields'     => !empty($state['is_capture_active']) ? ($state['capture_fields'] ?? []) : null,
-            'custom_title'       => !empty($state['custom_title']) ? trim($state['custom_title']) : null,
-            'custom_description' => !empty($state['custom_description']) ? trim($state['custom_description']) : null,
-            'custom_button_text' => !empty($state['custom_button_text']) ? trim($state['custom_button_text']) : null,
-            'is_active'          => true,
-            'created_by'         => Auth::id(),
+            'pegawai_name'             => $state['pegawai_name'],
+            'code'                     => Shortlink::generateUniqueCode(5),
+            'destination_url'          => $state['destination_url'],
+            'is_capture_active'        => $state['is_capture_active'] ?? false,
+            'capture_fields'           => !empty($state['is_capture_active']) ? ($state['capture_fields'] ?? []) : null,
+            'custom_title'             => !empty($state['custom_title']) ? trim($state['custom_title']) : null,
+            'custom_description'       => !empty($state['custom_description']) ? trim($state['custom_description']) : null,
+            'custom_button_text'       => !empty($state['custom_button_text']) ? trim($state['custom_button_text']) : null,
+            'is_active'                => true,
+            'created_by'               => Auth::id(),
         ]);
 
         $this->form->fill([
-            'is_capture_active'  => false,
-            'capture_fields'     => ['nama', 'whatsapp'],
-            'custom_title'       => null,
-            'custom_description' => null,
-            'custom_button_text' => null,
-            'is_active'          => true,
+            'is_capture_active'        => false,
+            'capture_fields'           => ['nama', 'whatsapp'],
+            'custom_title'             => null,
+            'custom_description'       => null,
+            'custom_button_text'       => null,
+            'is_active'                => true,
         ]);
 
         $this->dispatch('refreshShortlinkTables');
@@ -517,19 +519,19 @@ class DaftarShortlinkTable extends TableWidget
                             ->visible(fn(callable $get) => (bool) $get('is_capture_active')),
 
                         TextInput::make('custom_title')
-                            ->label('Judul Header Kustom')
+                            ->label('Judul Header Kustom (opsional)')
                             ->placeholder('Selamat Datang!')
                             ->maxLength(100)
                             ->helperText('Kosongkan untuk memakai teks bawaan: "Selamat Datang!"'),
 
                         TextInput::make('custom_button_text')
-                            ->label('Teks Tombol Kustom')
+                            ->label('Teks Tombol Kustom (opsional)')
                             ->placeholder('Lanjutkan ke Tautan')
                             ->maxLength(50)
                             ->helperText('Kosongkan untuk memakai teks bawaan: "Lanjutkan ke Tautan"'),
 
                         Textarea::make('custom_description')
-                            ->label('Teks Arahan Kustom')
+                            ->label('Teks Arahan Kustom (opsional)')
                             ->placeholder('Silakan lengkapi informasi singkat di bawah ini sebelum melanjutkan ke tautan tujuan.')
                             ->rows(2)
                             ->maxLength(500)
@@ -622,10 +624,59 @@ class DaftarLeadsTable extends TableWidget
                     ->sortable(),
             ])
             ->headerActions([
-                Action::make('export_excel')
-                    ->label('Download Data (Excel)')
-                    ->icon('heroicon-o-arrow-down-tray')
+                Action::make('live_feed_formula')
+                    ->label('⚡ Rumus Otomatis (Tanpa Script)')
+                    ->icon('heroicon-o-sparkles')
                     ->color('success')
+                    ->tooltip('Hubungkan Google Spreadsheet otomatis menggunakan rumus =IMPORTDATA tanpa perlu Apps Script')
+                    ->modalHeading('⚡ Rumus Otomatis Google Spreadsheet (Tanpa Perlu Apps Script)')
+                    ->modalDescription('Cukup salin rumus di bawah ini dan tempelkan di sel A1 pada Google Spreadsheet Anda. Data akan ditarik dan diperbarui secara otomatis!')
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup')
+                    ->fillForm(fn() => [
+                        'formula'       => ShortlinkSpreadsheetService::getImportDataFormula(),
+                        'live_feed_url' => ShortlinkSpreadsheetService::getLiveFeedUrl(),
+                    ])
+                    ->form([
+                        TextInput::make('formula')
+                            ->label('📋 Salin Rumus Google Spreadsheet Lengkap')
+                            ->extraAttributes([
+                                'onclick' => 'this.select(); navigator.clipboard.writeText(this.value);',
+                                'style'   => 'cursor: pointer; font-family: monospace; font-weight: bold; background-color: #f0fdf4;',
+                            ])
+                            ->helperText('👉 Klik pada kotak di atas untuk otomatis menyalin rumus, lalu tempelkan di sel A1 Google Spreadsheet.'),
+
+                        TextInput::make('live_feed_url')
+                            ->label('🔗 URL Live Feed Langsung (CSV)')
+                            ->extraAttributes([
+                                'onclick' => 'this.select(); navigator.clipboard.writeText(this.value);',
+                                'style'   => 'cursor: pointer; font-family: monospace; font-size: 12px;',
+                            ])
+                            ->helperText('Tautan ini dilindungi token rahasia agar data pengunjung aman.'),
+                    ])
+                    ->extraModalFooterActions([
+                        Action::make('regenerate_token')
+                            ->label('🔄 Generate Ulang Token Rahasia')
+                            ->color('gray')
+                            ->requiresConfirmation()
+                            ->modalHeading('Generate Ulang Token?')
+                            ->modalDescription('Jika token digenerate ulang, rumus lama di Google Spreadsheet harus diperbarui dengan rumus baru.')
+                            ->action(function () {
+                                $newToken = bin2hex(random_bytes(16));
+                                ShortlinkSetting::set('spreadsheet_feed_token', $newToken);
+
+                                Notification::make()
+                                    ->title('Token Berhasil Diperbarui!')
+                                    ->body('Rumus baru telah digenerate. Silakan salin kembali rumus ke spreadsheet Anda.')
+                                    ->success()
+                                    ->send();
+                            }),
+                    ]),
+
+                Action::make('export_excel')
+                    ->label('Download Excel')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('info')
                     ->tooltip('Unduh data pengunjung beserta gambar barcode/QR code ke file Excel (.xlsx)')
                     ->url(route('admin.shortlink.leads.export'))
                     ->openUrlInNewTab(false),

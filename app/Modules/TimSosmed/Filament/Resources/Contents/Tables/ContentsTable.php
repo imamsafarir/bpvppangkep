@@ -31,7 +31,9 @@ class ContentsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->poll('15s')
             ->modifyQueryUsing(function (Builder $query) {
+                $userId = Auth::id();
                 $query->with([
                     'pegawai',
                     'instruktur',
@@ -39,6 +41,8 @@ class ContentsTable
                     'editor',
                     'admin',
                     'platforms',
+                    'reads' => fn($q) => $q->where('user_id', $userId),
+                    'comments',
                 ])->withCount('comments');
 
                 $user = Auth::user();
@@ -63,11 +67,11 @@ class ContentsTable
             ->defaultSort('created_at', 'desc')
 
             ->recordUrl(function ($record) {
-                if (Auth::user()?->isAdmin()) {
-                    return ContentResource::getUrl('edit', ['record' => $record]);
+                if ($record->status === 'selesai' && ! (Auth::user()?->isAdmin() ?? false)) {
+                    return ContentResource::getUrl('view', ['record' => $record]);
                 }
 
-                if ($record->status === 'selesai') {
+                if (! ContentResource::canEdit($record)) {
                     return ContentResource::getUrl('view', ['record' => $record]);
                 }
 
@@ -99,8 +103,18 @@ class ContentsTable
                         $html = "<span style='display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; flex-wrap: wrap;'>";
                         $html .= "<span style='font-size: 9.5px; font-weight: 700; padding: 1.5px 7px; border-radius: 9999px; background: {$typeBg}; color: {$typeColor}; border: 1px solid {$typeBorder};'>{$typeText}</span>";
 
-                        if ($record->comments_count > 0) {
-                            $html .= "<span style='font-size: 9.5px; font-weight: 700; padding: 1.5px 6px; border-radius: 9999px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;'>💬 {$record->comments_count} Diskusi</span>";
+                        $commentsCount = $record->comments_count ?? $record->comments->count();
+                        if ($commentsCount > 0) {
+                            $unreadCount = $record->getUnreadCommentsCount();
+
+                            if ($unreadCount > 0) {
+                                $html .= "<span style='font-size: 9.5px; font-weight: 700; padding: 1.5px 7px; border-radius: 9999px; background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 4px; box-shadow: 0 0 0 1px rgba(239, 68, 68, 0.15);'>";
+                                $html .= "<span style='width: 6px; height: 6px; border-radius: 9999px; background: #ef4444; display: inline-block; box-shadow: 0 0 4px rgba(239, 68, 68, 0.6);'></span>";
+                                $html .= "💬 {$commentsCount} Diskusi <span style='background: #ef4444; color: #ffffff; font-size: 8.5px; padding: 0 4px; border-radius: 9999px; font-weight: 800; letter-spacing: -0.02em;'>+{$unreadCount} baru</span>";
+                                $html .= "</span>";
+                            } else {
+                                $html .= "<span style='font-size: 9.5px; font-weight: 700; padding: 1.5px 6px; border-radius: 9999px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1;'>💬 {$commentsCount} Diskusi</span>";
+                            }
                         }
 
                         $html .= "</span>";
@@ -588,6 +602,36 @@ class ContentsTable
                     ->icon('heroicon-m-ellipsis-vertical')
                     ->color('gray')
                     ->button(),
+
+                Action::make('diskusi')
+                    ->label('')
+                    ->icon('heroicon-m-chat-bubble-left-right')
+                    ->color(fn($record) => $record->getUnreadCommentsCount() > 0 ? 'danger' : 'gray')
+                    ->badge(function ($record) {
+                        $unread = $record->getUnreadCommentsCount();
+                        if ($unread > 0) {
+                            return "+{$unread}";
+                        }
+                        $total = $record->comments_count ?? $record->comments->count();
+                        return $total > 0 ? (string) $total : null;
+                    })
+                    ->badgeColor(fn($record) => $record->getUnreadCommentsCount() > 0 ? 'danger' : 'gray')
+                    ->tooltip(function ($record) {
+                        $unread = $record->getUnreadCommentsCount();
+                        $total = $record->comments_count ?? $record->comments->count();
+                        if ($unread > 0) {
+                            return "💬 {$total} diskusi ({$unread} pesan baru belum dibaca)";
+                        }
+                        return $total > 0 ? "💬 {$total} diskusi tim" : 'Buka ruang diskusi';
+                    })
+                    ->modalHeading(fn($record) => '💬 Diskusi Tim: ' . $record->nama_kegiatan)
+                    ->modalDescription('Ruang obrolan dan koordinasi tim media sosial untuk konten ini.')
+                    ->modalWidth('xl')
+                    ->modalContent(fn($record) => view('timsosmed::filament.components.content-comments-modal', [
+                        'record' => $record,
+                    ]))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Tutup'),
 
                 ViewAction::make()
                     ->hiddenLabel()
