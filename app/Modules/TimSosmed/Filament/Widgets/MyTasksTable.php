@@ -21,7 +21,7 @@ class MyTasksTable extends BaseWidget
 
     protected static ?int $sort = 2;
 
-    protected static ?string $pollingInterval = '15s';
+    protected static ?string $pollingInterval = '60s';
 
     public static function canView(): bool
     {

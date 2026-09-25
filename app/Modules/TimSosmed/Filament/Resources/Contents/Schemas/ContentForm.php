@@ -14,6 +14,7 @@ use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\SpatieMediaLibraryFileUpload;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
@@ -549,6 +550,28 @@ class ContentForm
                                                                     ->openUrlInNewTab()
                                                                     ->visible(fn($state) => filled($state))
                                                             ),
+
+                                                        SpatieMediaLibraryFileUpload::make('bahan')
+                                                            ->label('📁 Upload Bahan Mentah (Gambar/Video)')
+                                                            ->helperText('Upload bisa lebih dari satu file. Gambar otomatis dikompresi ke AVIF untuk preview. Download = file asli.')
+                                                            ->collection('bahan')
+                                                            ->multiple()
+                                                            ->reorderable()
+                                                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'])
+                                                            ->maxSize(512000)
+                                                            ->downloadable()
+                                                            ->openable()
+                                                            ->panelLayout('grid')
+                                                            ->hintAction(
+                                                                Action::make('download_semua_bahan')
+                                                                    ->label('📦 Download Semua Bahan (ZIP)')
+                                                                    ->icon('heroicon-m-arrow-down-tray')
+                                                                    ->color('primary')
+                                                                    ->visible(fn($record) => $record && $record->getMedia('bahan')->isNotEmpty())
+                                                                    ->url(fn($record) => route('timsosmed.content.download-collection', ['content' => $record->id, 'collection' => 'bahan']))
+                                                                    ->openUrlInNewTab()
+                                                            )
+                                                            ->columnSpanFull(),
                                                     ])
                                                     ->columnSpanFull()
                                                     ->columns(['default' => 1, 'md' => 2])
@@ -677,6 +700,28 @@ class ContentForm
                                                     ->openUrlInNewTab()
                                                     ->visible(fn($state) => filled($state))
                                             ),
+
+                                        SpatieMediaLibraryFileUpload::make('editing')
+                                            ->label('🎬 Upload Hasil Editing (Gambar/Video Final)')
+                                            ->helperText('Upload bisa lebih dari satu file. Gambar otomatis dikompresi ke AVIF untuk preview. Download = file asli.')
+                                            ->collection('editing')
+                                            ->multiple()
+                                            ->reorderable()
+                                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/avif', 'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm'])
+                                            ->maxSize(512000)
+                                            ->downloadable()
+                                            ->openable()
+                                            ->panelLayout('grid')
+                                            ->hintAction(
+                                                Action::make('download_semua_editing')
+                                                    ->label('📦 Download Semua Hasil Edit (ZIP)')
+                                                    ->icon('heroicon-m-arrow-down-tray')
+                                                    ->color('success')
+                                                    ->visible(fn($record) => $record && $record->getMedia('editing')->isNotEmpty())
+                                                    ->url(fn($record) => route('timsosmed.content.download-collection', ['content' => $record->id, 'collection' => 'editing']))
+                                                    ->openUrlInNewTab()
+                                            )
+                                            ->columnSpanFull(),
                                     ])
                                     ->disabled(function ($record) {
                                         $user = Auth::user();

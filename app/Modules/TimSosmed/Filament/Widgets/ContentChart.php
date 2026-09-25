@@ -13,7 +13,7 @@ class ContentChart extends ChartWidget
     // Properti standar Filament (Tanpa kata static)
     protected ?string $heading = '📈 Tren Produksi Konten (Bulan Ini)';
 
-    protected ?string $pollingInterval = '15s';
+    protected ?string $pollingInterval = null;
 
     protected static ?int $sort = 3;
 

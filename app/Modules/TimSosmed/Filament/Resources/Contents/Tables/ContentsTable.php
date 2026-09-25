@@ -31,7 +31,7 @@ class ContentsTable
     public static function configure(Table $table): Table
     {
         return $table
-            ->poll('15s')
+            ->poll('60s')
             ->modifyQueryUsing(function (Builder $query) {
                 $userId = Auth::id();
                 $query->with([
@@ -649,6 +649,11 @@ class ContentsTable
                 DeleteAction::make()
                     ->hiddenLabel()
                     ->tooltip('Hapus')
+                    ->requiresConfirmation()
+                    ->modalHeading('Hapus Konten?')
+                    ->modalDescription('Semua file bahan mentah dan hasil editing yang terupload juga akan dihapus permanen dari storage. Tindakan ini tidak dapat dibatalkan.')
+                    ->modalSubmitActionLabel('Ya, Hapus Permanen')
+                    ->color('danger')
                     ->visible(
                         fn($record) => (Auth::user()?->isAdmin() ?? false)
                             || ((Auth::user()?->isMedsosPlanner() ?? false) && $record->status !== 'selesai')
@@ -706,7 +711,11 @@ class ContentsTable
 
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->requiresConfirmation()
+                        ->modalHeading('Hapus Konten Terpilih?')
+                        ->modalDescription('Semua file media (bahan mentah & hasil editing) dari konten yang dipilih akan dihapus permanen dari storage. Tindakan ini tidak dapat dibatalkan.')
+                        ->modalSubmitActionLabel('Ya, Hapus Semua'),
 
                     BulkAction::make('mark_as_done')
                         ->label('Tandai Selesai (Massal)')

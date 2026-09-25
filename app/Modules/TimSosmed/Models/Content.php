@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 
 class Content extends Model implements HasMedia
 {
@@ -17,7 +18,53 @@ class Content extends Model implements HasMedia
 
     protected $guarded = [];
 
+    /**
+     * Saat Content dihapus, hapus semua file media dari storage.
+     * Spatie InteractsWithMedia sudah handle ini, method ini sebagai pengaman eksplisit.
+     */
+    protected static function boot(): void
+    {
+        parent::boot();
+
+        static::deleting(function (self $content) {
+            // Hapus semua media beserta file fisiknya dari disk
+            $content->media()->get()->each(fn($media) => $media->delete());
+        });
+    }
+
     // =========================
+    // SPATIE MEDIA LIBRARY
+    // =========================
+
+    /**
+     * Daftarkan koleksi media:
+     * - 'bahan'   : bahan mentah dari Planner (gambar/video, bisa lebih dari satu)
+     * - 'editing' : hasil editing dari Editor (gambar/video, bisa lebih dari satu)
+     */
+    public function registerMediaCollections(): void
+    {
+        $this->addMediaCollection('bahan')
+            ->useDisk('public');
+
+        $this->addMediaCollection('editing')
+            ->useDisk('public');
+    }
+
+    /**
+     * Konversi otomatis:
+     * - Gambar → AVIF (untuk preview, hemat bandwidth)
+     * - Download selalu menggunakan file asli (original)
+     */
+    public function registerMediaConversions(?Media $media = null): void
+    {
+        // Hanya proses file gambar (bukan video)
+        $this->addMediaConversion('avif-preview')
+            ->format('avif')
+            ->width(1280)
+            ->performOnCollections('bahan', 'editing')
+            ->nonQueued(); // Queued via Job terpisah untuk video AV1
+    }
+
     // RELASI PENANGGUNG JAWAB
     // =========================
 

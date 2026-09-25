@@ -11,7 +11,7 @@ use Illuminate\Support\HtmlString;
 
 class BebanKerjaOverview extends BaseWidget
 {
-    protected ?string $pollingInterval = '5s';
+    protected ?string $pollingInterval = '60s';
 
     protected array | int | null $columns = 3;
 

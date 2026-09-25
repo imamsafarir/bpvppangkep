@@ -74,7 +74,7 @@ class AdminPanelProvider extends PanelProvider
             ->darkMode(false)
             ->sidebarCollapsibleOnDesktop()
             ->databaseNotifications()
-            ->databaseNotificationsPolling('15s')
+            ->databaseNotificationsPolling('60s')
 
             // Auto-discover Resources
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
@@ -113,13 +113,15 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-            // HOOK: PWA Manifest & Service Worker
+            // HOOK: PWA Manifest, Service Worker & Performance Hints
             ->renderHook(
                 'panels::head.done',
                 fn(): string => '
                 <link rel="manifest" href="/manifest.json">
                 <meta name="theme-color" content="#4f46e5">
                 <meta name="apple-mobile-web-app-capable" content="yes">
+                <link rel="preconnect" href="' . url('/') . '" crossorigin>
+                <link rel="dns-prefetch" href="//fonts.bunny.net">
                 <script>
                     if ("serviceWorker" in navigator) {
                         navigator.serviceWorker.register("/sw.js");
